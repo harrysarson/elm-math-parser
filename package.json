@@ -1,0 +1,12 @@
+{
+  "name": "elm-math-parser",
+  "devDependencies": {
+    "elm": "^0.18.0",
+    "elm-format": "^0.6.1-alpha",
+    "elm-test": "^0.18.12"
+  },
+  "scripts": {
+    "test": "elm test",
+    "lint": "elm format src/ tests/ --validate"
+  }
+}
