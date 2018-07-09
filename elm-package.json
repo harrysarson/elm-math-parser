@@ -1,12 +1,14 @@
 {
     "version": "1.0.0",
     "summary": "Parse mathematical expressions in elm",
-    "repository": "https://github.com/harrysarson/elm-math-parse.git",
-    "license": "BSD3",
+    "repository": "https://github.com/harrysarson/elm-parse-mathematics.git",
+    "license": "MIT",
     "source-directories": [
-        "."
+        "src"
     ],
-    "exposed-modules": [],
+    "exposed-modules": [
+        "ParseMathematics"
+    ],
     "dependencies": {
         "elm-lang/core": "5.1.1 <= v < 6.0.0"
     },
