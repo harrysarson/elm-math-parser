@@ -34,15 +34,14 @@ operator opChar =
             (\c rhs -> (\lhs -> Expression.BinaryOperator lhs c rhs))
     in
         Parser.inContext ("binary operator " ++ String.fromChar opChar) <|
-            --     Parser.delayedCommitMap (\lhs ( op, rhs ) -> Expression.BinaryOperator lhs op rhs) lhsParser <|
-            Parser.succeed Expression.BinaryOperator
-                |= symbolParser
-                |= (Parser.symbol (String.fromChar opChar)
-                        |> Parser.map (always opChar)
-                   )
-                |. spaces
-                |= symbolParser
-                |. spaces
+            Parser.delayedCommitMap (\lhs ( op, rhs ) -> Expression.BinaryOperator lhs op rhs) lhsParser <|
+                Parser.succeed (,)
+                    |= (Parser.symbol (String.fromChar opChar)
+                            |> Parser.map (always opChar)
+                       )
+                    |. spaces
+                    |= symbolParser
+                    |. spaces
 
 
 symbolParser : Parser Expression
