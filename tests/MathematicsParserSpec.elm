@@ -35,4 +35,21 @@ tests =
                     "   5 +   7        "
                         |> Parser.run expression
                         |> Expect.equal (expectedAst)
+        , test "Adds three numbers" <|
+            \() ->
+                let
+                    expectedAst =
+                        Ok <|
+                            Expression.BinaryOperator
+                                (Expression.Symbol "5")
+                                '+'
+                                (Expression.BinaryOperator
+                                    (Expression.Symbol "7")
+                                    '+'
+                                    (Expression.Symbol "1")
+                                )
+                in
+                    "   5 +   7     + 1   "
+                        |> Parser.run expression
+                        |> Expect.equal (expectedAst)
         ]

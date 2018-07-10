@@ -40,7 +40,10 @@ operator opChar =
                             |> Parser.map (always opChar)
                        )
                     |. spaces
-                    |= symbolParser
+                    |= Parser.oneOf
+                        [ Parser.lazy (\() -> operator opChar)
+                        , symbolParser
+                        ]
                     |. spaces
 
 
