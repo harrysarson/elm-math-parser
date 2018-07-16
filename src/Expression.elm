@@ -15,7 +15,6 @@ import Char
 binaryOperators : List Char
 binaryOperators =
     [ '+'
-    , '-'
     ]
 
 

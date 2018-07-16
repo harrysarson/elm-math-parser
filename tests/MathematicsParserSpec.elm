@@ -1,55 +1,67 @@
 module MathematicsParserSpec exposing (tests)
 
+import String
 import Expression exposing (Expression)
 import Parser exposing (run)
 import MathematicsParser exposing (expression)
-import Test exposing (test, describe)
+import Test exposing (test, describe, fuzz)
+import Fuzz
 import Expect
+import MaFuzz
 
 
+tests : Test.Test
 tests =
-    describe "Parsing binary operators"
-        [ test "Adds two numbers" <|
-            \() ->
+    describe "Parse mathematical expressions"
+        [ fuzz
+            (Fuzz.tuple3
+                ( MaFuzz.addSpaces MaFuzz.symbol
+                , MaFuzz.binaryOperator
+                , MaFuzz.addSpaces MaFuzz.symbol
+                )
+            )
+            "Parse binary operators"
+          <|
+            \( lhs, op, rhs ) ->
                 let
                     expectedAst =
                         Ok <|
                             Expression.BinaryOperator
-                                (Expression.Symbol "5")
-                                '+'
-                                (Expression.Symbol "7")
+                                (Expression.Symbol (String.trim lhs))
+                                op
+                                (Expression.Symbol (String.trim rhs))
                 in
-                    "5+7"
+                    (lhs ++ String.fromChar op ++ rhs)
                         |> Parser.run expression
                         |> Expect.equal (expectedAst)
-        , test "Adds two numbers with spaces" <|
-            \() ->
-                let
-                    expectedAst =
-                        Ok <|
-                            Expression.BinaryOperator
-                                (Expression.Symbol "5")
-                                '+'
-                                (Expression.Symbol "7")
-                in
-                    "   5 +   7        "
-                        |> Parser.run expression
-                        |> Expect.equal (expectedAst)
-        , test "Adds three numbers" <|
-            \() ->
+        , fuzz
+            (Fuzz.tuple4
+                ( MaFuzz.binaryOperator
+                , MaFuzz.addSpaces MaFuzz.symbol
+                , MaFuzz.addSpaces MaFuzz.symbol
+                , MaFuzz.addSpaces MaFuzz.symbol
+                )
+            )
+            "Parse binary operators with left associativity"
+          <|
+            \( op, a, b, c ) ->
                 let
                     expectedAst =
                         Ok <|
                             Expression.BinaryOperator
                                 (Expression.BinaryOperator
-                                    (Expression.Symbol "5")
-                                    '+'
-                                    (Expression.Symbol "7")
+                                    (Expression.Symbol (String.trim a))
+                                    op
+                                    (Expression.Symbol (String.trim b))
                                 )
-                                '+'
-                                (Expression.Symbol "1")
+                                op
+                                (Expression.Symbol (String.trim c))
                 in
-                    "   5 +   7     + 1   "
+                    a
+                        ++ String.fromChar op
+                        ++ b
+                        ++ String.fromChar op
+                        ++ c
                         |> Parser.run expression
                         |> Expect.equal (expectedAst)
         ]
