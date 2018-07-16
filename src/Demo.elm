@@ -6,6 +6,7 @@ import Html.Events exposing (onInput)
 import Task
 import Parser exposing (run)
 import MathematicsParser exposing (expression)
+import Expression exposing (stringify)
 
 
 initialModel =
@@ -37,16 +38,23 @@ update (NewContent content) oldContent =
 
 
 view content =
-    div []
-        [ input [ defaultValue initialModel, onInput NewContent, myStyle ] []
-        , div [ myStyle ] [ text (toString <| run expression content) ]
-        ]
+    let
+        parsed =
+            run expression content
+    in
+        div [] <|
+            [ input [ defaultValue initialModel, onInput NewContent, myStyle ] []
+            , div [ myStyle ] [ text (toString parsed) ]
+            ]
+                ++ (parsed
+                        |> Result.map (\p -> [ div [ myStyle ] [ text (stringify p) ] ])
+                        |> Result.withDefault []
+                   )
 
 
 myStyle =
     style
         [ ( "width", "100%" )
-        , ( "height", "40px" )
         , ( "padding", "10px 0" )
         , ( "font-size", "2em" )
         , ( "text-align", "center" )
