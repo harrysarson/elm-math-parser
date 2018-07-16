@@ -1,4 +1,4 @@
-module Expression exposing (Expression(..), binaryOperators, isValidSymbolChar, stringify)
+module Expression exposing (Expression(..), binaryOperators, stringify)
 
 {-| This library contains types needed to represent simple mathematical expressions.
 
@@ -8,8 +8,6 @@ module Expression exposing (Expression(..), binaryOperators, isValidSymbolChar, 
 @docs Expression
 
 -}
-
-import Char
 
 
 binaryOperators : List Char
@@ -37,33 +35,3 @@ stringify expression =
 
         Symbol str ->
             str
-
-
-isValidSymbolChar : Char -> Bool
-isValidSymbolChar charToTest =
-    let
-        testInRange lower upper char =
-            let
-                lowerNum =
-                    Char.toCode lower
-
-                upperNum =
-                    Char.toCode upper
-
-                charNum =
-                    Char.toCode char
-            in
-                charNum >= lowerNum && charNum <= upperNum
-
-        isNumber =
-            testInRange '0' '9'
-
-        isLowerEnglish =
-            testInRange 'a' 'z'
-
-        isUpperEnglish =
-            testInRange 'A' 'Z'
-    in
-        isNumber charToTest
-            || isLowerEnglish charToTest
-            || isUpperEnglish charToTest

@@ -11,8 +11,9 @@ A string expression is converted into an abstract syntax tree.
 
 -}
 
-import Expression exposing (Expression, binaryOperators, isValidSymbolChar)
+import Char
 import Parser exposing (Parser, (|.), (|=))
+import Expression exposing (Expression, binaryOperators)
 
 
 {-| A mathematical expression.
@@ -73,3 +74,33 @@ expression : Parser Expression
 expression =
     operator '+'
         |. Parser.end
+
+
+isValidSymbolChar : Char -> Bool
+isValidSymbolChar charToTest =
+    let
+        testInRange lower upper char =
+            let
+                lowerNum =
+                    Char.toCode lower
+
+                upperNum =
+                    Char.toCode upper
+
+                charNum =
+                    Char.toCode char
+            in
+                charNum >= lowerNum && charNum <= upperNum
+
+        isNumber =
+            testInRange '0' '9'
+
+        isLowerEnglish =
+            testInRange 'a' 'z'
+
+        isUpperEnglish =
+            testInRange 'A' 'Z'
+    in
+        isNumber charToTest
+            || isLowerEnglish charToTest
+            || isUpperEnglish charToTest
