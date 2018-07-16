@@ -21,6 +21,7 @@ type alias MathematicsParser =
     Parser Expression
 
 
+toBinaryOp : Char -> Expression -> List Expression -> Expression
 toBinaryOp op expression rhsExtraList =
     case rhsExtraList of
         [] ->

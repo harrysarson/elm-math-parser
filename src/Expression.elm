@@ -12,6 +12,7 @@ module Expression exposing (Expression(..), binaryOperators, isValidSymbolChar, 
 import Char
 
 
+binaryOperators : List Char
 binaryOperators =
     [ '+'
     , '-'
@@ -26,6 +27,7 @@ type Expression
     | Symbol String
 
 
+stringify : Expression -> String
 stringify expression =
     case expression of
         BinaryOperator lhs op rhs ->
@@ -38,6 +40,7 @@ stringify expression =
             str
 
 
+isValidSymbolChar : Char -> Bool
 isValidSymbolChar charToTest =
     let
         testInRange lower upper char =
