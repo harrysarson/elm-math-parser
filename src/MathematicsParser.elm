@@ -22,14 +22,16 @@ type alias MathematicsParser =
     Parser Expression
 
 
-toBinaryOp : Char -> Expression -> List Expression -> Expression
-toBinaryOp op expression rhsExtraList =
-    case rhsExtraList of
-        [] ->
-            expression
+{-| Parse expressions.
+-}
+expression : Parser Expression
+expression =
+    operator '+'
+        |. Parser.end
 
-        nextRhs :: futureRhs ->
-            toBinaryOp op (Expression.BinaryOperator expression op nextRhs) futureRhs
+
+
+-- Parsers --
 
 
 operator : Char -> Parser Expression
@@ -68,12 +70,18 @@ spaces =
     Parser.ignore Parser.zeroOrMore (\c -> c == ' ')
 
 
-{-| Parse expressions.
--}
-expression : Parser Expression
-expression =
-    operator '+'
-        |. Parser.end
+
+-- Helper Functions --
+
+
+toBinaryOp : Char -> Expression -> List Expression -> Expression
+toBinaryOp op expression rhsExtraList =
+    case rhsExtraList of
+        [] ->
+            expression
+
+        nextRhs :: futureRhs ->
+            toBinaryOp op (Expression.BinaryOperator expression op nextRhs) futureRhs
 
 
 isValidSymbolChar : Char -> Bool
