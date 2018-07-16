@@ -41,13 +41,13 @@ tests =
                     expectedAst =
                         Ok <|
                             Expression.BinaryOperator
-                                (Expression.Symbol "5")
-                                '+'
                                 (Expression.BinaryOperator
-                                    (Expression.Symbol "7")
+                                    (Expression.Symbol "5")
                                     '+'
-                                    (Expression.Symbol "1")
+                                    (Expression.Symbol "7")
                                 )
+                                '+'
+                                (Expression.Symbol "1")
                 in
                     "   5 +   7     + 1   "
                         |> Parser.run expression

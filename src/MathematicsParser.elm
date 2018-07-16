@@ -21,6 +21,15 @@ type alias MathematicsParser =
     Parser Expression
 
 
+toBinaryOp op expression rhsExtraList =
+    case rhsExtraList of
+        [] ->
+            expression
+
+        nextRhs :: futureRhs ->
+            toBinaryOp op (Expression.BinaryOperator expression op nextRhs) futureRhs
+
+
 operator : Char -> Parser Expression
 operator opChar =
     let
@@ -29,22 +38,20 @@ operator opChar =
                 |. spaces
                 |= symbolParser
                 |. spaces
-
-        expresionWithoutLhs =
-            (\c rhs -> (\lhs -> Expression.BinaryOperator lhs c rhs))
     in
         Parser.inContext ("binary operator " ++ String.fromChar opChar) <|
-            Parser.delayedCommitMap (\lhs ( op, rhs ) -> Expression.BinaryOperator lhs op rhs) lhsParser <|
-                Parser.succeed (,)
-                    |= (Parser.symbol (String.fromChar opChar)
-                            |> Parser.map (always opChar)
-                       )
-                    |. spaces
-                    |= Parser.oneOf
-                        [ Parser.lazy (\() -> operator opChar)
-                        , symbolParser
-                        ]
-                    |. spaces
+            Parser.oneOf
+                [ Parser.delayedCommitMap (toBinaryOp opChar) lhsParser <|
+                    Parser.succeed identity
+                        |= Parser.repeat Parser.oneOrMore
+                            (Parser.succeed identity
+                                |. Parser.symbol (String.fromChar opChar)
+                                |. spaces
+                                |= symbolParser
+                                |. spaces
+                            )
+                , symbolParser
+                ]
 
 
 symbolParser : Parser Expression
