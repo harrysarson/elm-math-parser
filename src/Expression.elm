@@ -9,6 +9,8 @@ module Expression exposing (Expression(..), binaryOperators, isValidSymbolChar, 
 
 -}
 
+import Char
+
 
 binaryOperators =
     [ '+'
@@ -37,5 +39,29 @@ stringify expression =
 
 
 isValidSymbolChar charToTest =
-    (charToTest /= ' ')
-        && List.all (\c -> c /= charToTest) binaryOperators
+    let
+        testInRange lower upper char =
+            let
+                lowerNum =
+                    Char.toCode lower
+
+                upperNum =
+                    Char.toCode upper
+
+                charNum =
+                    Char.toCode char
+            in
+                charNum >= lowerNum && charNum <= upperNum
+
+        isNumber =
+            testInRange '0' '9'
+
+        isLowerEnglish =
+            testInRange 'a' 'z'
+
+        isUpperEnglish =
+            testInRange 'A' 'Z'
+    in
+        isNumber charToTest
+            || isLowerEnglish charToTest
+            || isUpperEnglish charToTest
