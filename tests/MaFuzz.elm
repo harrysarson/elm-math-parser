@@ -1,6 +1,7 @@
 module MaFuzz exposing (symbol, binaryOperator, spaces, addSpaces)
 
 import Char
+import Set
 import Fuzz
 import Random.Pcg as Random exposing (Generator)
 import Expression
@@ -43,7 +44,10 @@ symbol =
 
 binaryOperator : Fuzz.Fuzzer Char
 binaryOperator =
-    Fuzz.oneOf <| List.map Fuzz.constant Expression.binaryOperators
+    Expression.binaryOperators
+        |> List.map (Set.toList >> List.map Fuzz.constant)
+        |> List.map Fuzz.oneOf
+        |> Fuzz.oneOf
 
 
 spaces : Fuzz.Fuzzer String

@@ -64,4 +64,32 @@ tests =
                         ++ c
                         |> Parser.run expression
                         |> Expect.equal (expectedAst)
+        , describe "Operator precidence"
+            [ makePrecedenceTest "( 7 + 8 )"
+            , makePrecedenceTest "( ( aA0 - bB1 ) + cC2 )"
+            , makePrecedenceTest "( ( ( ( 123123 / 12314 ) + ( 12313 * 1231241 ) ) - 123 ) - 1 )"
+            , makePrecedenceTest "( ( 6 / 5 ) - 1 )"
+            , makePrecedenceTest "( ( 4 * 6 ) + 2 )"
+            , makePrecedenceTest "( 2 - ( 8 / 7 ) )"
+            ]
         ]
+
+
+makePrecedenceTest : String -> Test.Test
+makePrecedenceTest withParenthesis =
+    let
+        withoutParenthesis =
+            withParenthesis
+                |> String.split "( "
+                |> String.join ""
+                |> String.split " )"
+                |> String.join ""
+    in
+        test
+            (withoutParenthesis ++ " == " ++ withParenthesis)
+        <|
+            \() ->
+                withoutParenthesis
+                    |> Parser.run expression
+                    |> Result.map Expression.stringify
+                    |> Expect.equal (Ok withParenthesis)

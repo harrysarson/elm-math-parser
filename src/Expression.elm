@@ -9,11 +9,15 @@ module Expression exposing (Expression(..), binaryOperators, stringify)
 
 -}
 
+import Set exposing (Set)
 
-binaryOperators : List Char
+
+binaryOperators : List (Set Char)
 binaryOperators =
-    [ '+'
+    [ [ '+', '-' ]
+    , [ '*', '/' ]
     ]
+        |> List.map Set.fromList
 
 
 {-| A mathematical expression.

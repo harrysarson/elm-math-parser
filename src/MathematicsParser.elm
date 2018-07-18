@@ -12,6 +12,7 @@ A string expression is converted into an abstract syntax tree.
 -}
 
 import Char
+import Set exposing (Set)
 import Parser exposing (Parser, (|.), (|=))
 import Expression exposing (Expression, binaryOperators)
 
@@ -26,7 +27,10 @@ type alias MathematicsParser =
 -}
 expression : Parser Expression
 expression =
-    operator '+'
+    List.foldr
+        (\opChars nextParser -> operators opChars nextParser)
+        symbolParser
+        Expression.binaryOperators
         |. Parser.end
 
 
@@ -34,28 +38,34 @@ expression =
 -- Parsers --
 
 
-operator : Char -> Parser Expression
-operator opChar =
-    let
-        lhsParser =
-            Parser.succeed identity
-                |. spaces
-                |= symbolParser
-                |. spaces
-    in
-        Parser.inContext ("binary operator " ++ String.fromChar opChar) <|
-            Parser.oneOf
-                [ Parser.delayedCommitMap (toBinaryOp opChar) lhsParser <|
-                    Parser.succeed identity
-                        |= Parser.repeat Parser.oneOrMore
-                            (Parser.succeed identity
-                                |. Parser.symbol (String.fromChar opChar)
-                                |. spaces
-                                |= symbolParser
-                                |. spaces
-                            )
-                , symbolParser
-                ]
+operators : Set Char -> Parser Expression -> Parser Expression
+operators opChars nextParser =
+    Parser.inContext ("binary operators " ++ String.join ", " (Set.toList <| Set.map String.fromChar opChars)) <|
+        Parser.oneOf
+            [ Parser.delayedCommitMap toBinaryOp (spaceIgnoringParser nextParser) <|
+                Parser.succeed identity
+                    |= Parser.repeat Parser.oneOrMore
+                        (Parser.succeed (,)
+                            |= Parser.oneOf
+                                (List.map
+                                    (\c ->
+                                        Parser.symbol (String.fromChar c)
+                                            |> Parser.map (always c)
+                                    )
+                                    (Set.toList opChars)
+                                )
+                            |= spaceIgnoringParser nextParser
+                        )
+            , spaceIgnoringParser nextParser
+            ]
+
+
+spaceIgnoringParser : Parser a -> Parser a
+spaceIgnoringParser parser =
+    Parser.succeed identity
+        |. spaces
+        |= parser
+        |. spaces
 
 
 symbolParser : Parser Expression
@@ -74,14 +84,14 @@ spaces =
 -- Helper Functions --
 
 
-toBinaryOp : Char -> Expression -> List Expression -> Expression
-toBinaryOp op expression rhsExtraList =
+toBinaryOp : Expression -> List ( Char, Expression ) -> Expression
+toBinaryOp expression rhsExtraList =
     case rhsExtraList of
         [] ->
             expression
 
-        nextRhs :: futureRhs ->
-            toBinaryOp op (Expression.BinaryOperator expression op nextRhs) futureRhs
+        ( op, nextRhs ) :: futureRhs ->
+            toBinaryOp (Expression.BinaryOperator expression op nextRhs) futureRhs
 
 
 isValidSymbolChar : Char -> Bool
