@@ -1,4 +1,4 @@
-module MaFuzz exposing (symbol, binaryOperator, spaces, addSpaces)
+module MaFuzz exposing (symbol, binaryOperator, unaryOperator, spaces, addSpaces)
 
 import Char
 import Set
@@ -47,6 +47,14 @@ binaryOperator =
     Expression.binaryOperators
         |> List.map (Set.toList >> List.map Fuzz.constant)
         |> List.map Fuzz.oneOf
+        |> Fuzz.oneOf
+
+
+unaryOperator : Fuzz.Fuzzer Char
+unaryOperator =
+    Expression.unaryOperators
+        |> Set.toList
+        |> List.map Fuzz.constant
         |> Fuzz.oneOf
 
 

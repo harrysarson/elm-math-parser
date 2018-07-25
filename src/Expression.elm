@@ -1,4 +1,4 @@
-module Expression exposing (Expression(..), binaryOperators, stringify)
+module Expression exposing (..)
 
 {-| This library contains types needed to represent simple mathematical expressions.
 
@@ -18,6 +18,12 @@ binaryOperators =
     , [ '*', '/' ]
     ]
         |> List.map Set.fromList
+
+
+unaryOperators : Set Char
+unaryOperators =
+    [ '+', '-' ]
+        |> Set.fromList
 
 
 {-| A mathematical expression.

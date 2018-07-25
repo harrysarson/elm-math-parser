@@ -28,8 +28,8 @@ type alias MathematicsParser =
 expression : Parser Expression
 expression =
     List.foldr
-        (\opChars nextParser -> operators opChars nextParser)
-        symbolParser
+        (\opChars nextParser -> binaryOperators opChars nextParser)
+        (unaryOperators Expression.unaryOperators symbolParser)
         Expression.binaryOperators
         |. Parser.end
 
@@ -38,26 +38,39 @@ expression =
 -- Parsers --
 
 
-operators : Set Char -> Parser Expression -> Parser Expression
-operators opChars nextParser =
+binaryOperators : Set Char -> Parser Expression -> Parser Expression
+binaryOperators opChars nextParser =
     Parser.inContext ("binary operators " ++ String.join ", " (Set.toList <| Set.map String.fromChar opChars)) <|
         Parser.oneOf
             [ Parser.delayedCommitMap toBinaryOp (spaceIgnoringParser nextParser) <|
                 Parser.succeed identity
                     |= Parser.repeat Parser.oneOrMore
                         (Parser.succeed (,)
-                            |= Parser.oneOf
-                                (List.map
-                                    (\c ->
-                                        Parser.symbol (String.fromChar c)
-                                            |> Parser.map (always c)
-                                    )
-                                    (Set.toList opChars)
-                                )
+                            |= operatorSymbol opChars
                             |= spaceIgnoringParser nextParser
                         )
             , spaceIgnoringParser nextParser
             ]
+
+
+unaryOperators : Set Char -> Parser Expression -> Parser Expression
+unaryOperators opChars nextParser =
+    let
+        checkNotAnotherUnary =
+            Parser.oneOf
+                [ Parser.succeed (Expression.Symbol "")
+                    |. spaceIgnoringParser (operatorSymbol opChars)
+                    |. Parser.fail "Cannot have two unary operators one after the other"
+                , nextParser
+                ]
+    in
+        Parser.inContext ("unary operators " ++ String.join ", " (Set.toList <| Set.map String.fromChar opChars)) <|
+            Parser.oneOf
+                [ Parser.succeed Expression.UnaryOperator
+                    |= spaceIgnoringParser (operatorSymbol opChars)
+                    |= spaceIgnoringParser nextParser
+                , spaceIgnoringParser nextParser
+                ]
 
 
 spaceIgnoringParser : Parser a -> Parser a
@@ -68,16 +81,47 @@ spaceIgnoringParser parser =
         |. spaces
 
 
+operatorSymbol : Set Char -> Parser Char
+operatorSymbol opSymbols =
+    Parser.oneOf
+        (List.map
+            (\c ->
+                Parser.symbol (String.fromChar c)
+                    |> Parser.map (always c)
+            )
+            (Set.toList opSymbols)
+        )
+
+
 symbolParser : Parser Expression
 symbolParser =
-    Parser.inContext "symbol" <|
-        Parser.succeed Expression.Symbol
-            |= Parser.keep Parser.oneOrMore isValidSymbolChar
+    Parser.keep Parser.oneOrMore isValidSymbolChar
+        |> Parser.andCatch (\problem -> Parser.fail "Required a valid symbol character")
+        |> Parser.map Expression.Symbol
+        |> Parser.inContext "symbol"
 
 
 spaces : Parser ()
 spaces =
     Parser.ignore Parser.zeroOrMore (\c -> c == ' ')
+
+
+charInRange lower upper =
+    let
+        testInRange lower upper char =
+            let
+                lowerNum =
+                    Char.toCode lower
+
+                upperNum =
+                    Char.toCode upper
+
+                charNum =
+                    Char.toCode char
+            in
+                charNum >= lowerNum && charNum <= upperNum
+    in
+        Parser.keep Parser.oneOrMore (testInRange 'a' 'z')
 
 
 

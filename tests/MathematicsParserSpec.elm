@@ -64,13 +64,46 @@ tests =
                         ++ c
                         |> Parser.run expression
                         |> Expect.equal (expectedAst)
-        , describe "Operator precidence"
+        , fuzz
+            (Fuzz.tuple5
+                ( MaFuzz.addSpaces MaFuzz.symbol
+                , MaFuzz.binaryOperator
+                , MaFuzz.spaces
+                , MaFuzz.unaryOperator
+                , MaFuzz.addSpaces MaFuzz.symbol
+                )
+            )
+            "Parse unary operators with higher precedence than binary operators"
+          <|
+            \( a, binaryOp, spaces, unaryOp, b ) ->
+                let
+                    expectedAst =
+                        Ok <|
+                            Expression.BinaryOperator
+                                (Expression.Symbol (String.trim a))
+                                binaryOp
+                                (Expression.UnaryOperator
+                                    unaryOp
+                                    (Expression.Symbol (String.trim b))
+                                )
+                in
+                    a
+                        ++ String.fromChar binaryOp
+                        ++ spaces
+                        ++ String.fromChar unaryOp
+                        ++ b
+                        |> Parser.run expression
+                        |> Expect.equal (expectedAst)
+        , describe "Operator precedence"
             [ makePrecedenceTest "( 7 + 8 )"
             , makePrecedenceTest "( ( aA0 - bB1 ) + cC2 )"
             , makePrecedenceTest "( ( ( ( 123123 / 12314 ) + ( 12313 * 1231241 ) ) - 123 ) - 1 )"
             , makePrecedenceTest "( ( 6 / 5 ) - 1 )"
             , makePrecedenceTest "( ( 4 * 6 ) + 2 )"
             , makePrecedenceTest "( 2 - ( 8 / 7 ) )"
+            , makePrecedenceTest "( 2 + ( - 6 ) )"
+            , makePrecedenceTest "( ( + str ) - 19 )"
+            , makePrecedenceTest "( ( 8 * ( - 2 ) ) - ( STR / 7 ) )"
             ]
         ]
 
