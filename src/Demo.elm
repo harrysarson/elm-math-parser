@@ -1,8 +1,9 @@
 module Demo exposing (main)
 
-import Html exposing (Html, Attribute, beginnerProgram, text, div, input)
+import Html exposing (Html, Attribute, program, text, div, input)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
+import Dom
 import Task
 import Parser exposing (run)
 import MathematicsParser exposing (expression)
@@ -14,10 +15,11 @@ initialModel =
 
 
 main =
-    beginnerProgram
-        { model = initialModel
+    program
+        { init = ( initialModel, Task.attempt (always FocusResult) (Dom.focus "expression-input") )
         , view = view
         , update = update
+        , subscriptions = \_ -> Sub.none
         }
 
 
@@ -27,10 +29,16 @@ main =
 
 type Msg
     = NewContent String
+    | FocusResult
 
 
-update (NewContent content) oldContent =
-    content
+update msg oldContent =
+    case msg of
+        NewContent content ->
+            ( content, Cmd.none )
+
+        FocusResult ->
+            ( oldContent, Cmd.none )
 
 
 
@@ -43,7 +51,7 @@ view content =
             run expression content
     in
         div [] <|
-            [ input [ defaultValue initialModel, onInput NewContent, myStyle ] []
+            [ input [ defaultValue initialModel, id "expression-input", onInput NewContent, myStyle ] []
             , div [ myStyle ] [ text (toString parsed) ]
             ]
                 ++ (parsed
