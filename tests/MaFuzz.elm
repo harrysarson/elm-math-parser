@@ -1,10 +1,11 @@
-module MaFuzz exposing (symbol, binaryOperator, unaryOperator, spaces, addSpaces)
+module MaFuzz exposing (symbol, binaryOperator, unaryOperator, parseState, spaces, addSpaces)
 
 import Char
 import Set
 import Fuzz
 import Random.Pcg as Random exposing (Generator)
 import Expression
+import ParseState exposing (ParseState)
 
 
 symbolChar : Fuzz.Fuzzer Char
@@ -69,3 +70,25 @@ addSpaces fuzz =
     spaces
         |> Fuzz.map2 String.append fuzz
         |> Fuzz.map2 String.append spaces
+
+
+parseState : Fuzz.Fuzzer ParseState
+parseState =
+    let
+        sourceCharFuzz =
+            Fuzz.frequency
+                [ ( 2, Fuzz.constant '\n' )
+                , ( 2, Fuzz.constant ' ' )
+                , ( 1, Fuzz.constant '\x0D' )
+                , ( 1, Fuzz.constant '\t' )
+                , ( 10, Fuzz.char )
+                ]
+
+        sourceFuzz =
+            Fuzz.list sourceCharFuzz
+                |> Fuzz.map String.fromList
+    in
+        Fuzz.map2
+            (\source start -> { source = source, start = start })
+            sourceFuzz
+            (Fuzz.intRange 0 1000)

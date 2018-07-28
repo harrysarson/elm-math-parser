@@ -1,6 +1,6 @@
 module Demo exposing (main)
 
-import Html exposing (Html, Attribute, program, text, div, input)
+import Html exposing (Html, Attribute, program, text, div, input, ol, li)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 import Dom
@@ -45,25 +45,111 @@ update msg oldContent =
 -- VIEW
 
 
+flipResult result =
+    case result of
+        Err err ->
+            Ok err
+
+        Ok val ->
+            Err val
+
+
 view content =
     let
         parsed =
-            run expression content
+            expression content
+
+        numbers =
+            content
+                |> String.toList
+                |> List.indexedMap always
+                |> List.map (\i -> i % 10)
+                |> List.map toString
+                |> String.join ""
+
+        error =
+            parsed
+                |> flipResult
+                |> Result.toMaybe
+
+        errorPosition =
+            error
+                |> Maybe.map .position
+
+        errPointer =
+            errorPosition
+                |> Maybe.map
+                    (\p ->
+                        String.repeat p " "
+                            |> String.cons '^'
+                            |> String.reverse
+                            |> String.padRight (String.length content) ' '
+                    )
     in
-        div [] <|
-            [ input [ defaultValue initialModel, id "expression-input", onInput NewContent, myStyle ] []
-            , div [ myStyle ] [ text (toString parsed) ]
-            ]
-                ++ (parsed
-                        |> Result.map (\p -> [ div [ myStyle ] [ text (stringify p) ] ])
-                        |> Result.withDefault []
-                   )
+        div [ myStyle ]
+            ([ Just <|
+                input
+                    [ defaultValue initialModel
+                    , id "expression-input"
+                    , onInput NewContent
+                    , inputStyle
+                    ]
+                    []
+             , errPointer
+                |> Maybe.map
+                    (\pointer ->
+                        input
+                            [ value pointer
+                            , inputStyle
+                            ]
+                            []
+                    )
+             , error
+                |> Maybe.map .parseStack
+                |> Maybe.map
+                    (\stack ->
+                        ol [] <| List.map (\fun -> li [] [ text <| toString fun ]) stack
+                    )
+             , error
+                |> Maybe.map .errorType
+                |> Maybe.map
+                    (\type_ ->
+                        div [] [ text <| "type: " ++ toString type_ ]
+                    )
+             , Just <| div [] [ text (toString parsed) ]
+             , parsed
+                |> Result.map (\p -> div [] [ text (stringify p) ])
+                |> Result.toMaybe
+             ]
+                |> justList
+            )
+
+
+justList : List (Maybe a) -> List a
+justList list =
+    case list of
+        [] ->
+            []
+
+        maybeFirst :: rest ->
+            case maybeFirst of
+                Just first ->
+                    first :: justList rest
+
+                Nothing ->
+                    justList rest
 
 
 myStyle =
     style
-        [ ( "width", "100%" )
-        , ( "padding", "10px 0" )
+        [ ( "padding", "1em 1em" )
         , ( "font-size", "2em" )
-        , ( "text-align", "center" )
+        , ( "font-family", "monospace, monospace" )
+        ]
+
+
+inputStyle =
+    style
+        [ ( "width", "100%" )
+        , ( "font", "inherit" )
         ]

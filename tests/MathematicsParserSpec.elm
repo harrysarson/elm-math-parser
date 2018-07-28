@@ -2,7 +2,6 @@ module MathematicsParserSpec exposing (tests)
 
 import String
 import Expression exposing (Expression)
-import Parser exposing (run)
 import MathematicsParser exposing (expression)
 import Test exposing (test, describe, fuzz)
 import Fuzz
@@ -32,7 +31,7 @@ tests =
                                 (Expression.Symbol (String.trim rhs))
                 in
                     (lhs ++ String.fromChar op ++ rhs)
-                        |> Parser.run expression
+                        |> expression
                         |> Expect.equal (expectedAst)
         , fuzz
             (Fuzz.tuple4
@@ -62,7 +61,7 @@ tests =
                         ++ b
                         ++ String.fromChar op
                         ++ c
-                        |> Parser.run expression
+                        |> expression
                         |> Expect.equal (expectedAst)
         , fuzz
             (Fuzz.tuple5
@@ -92,7 +91,7 @@ tests =
                         ++ spaces
                         ++ String.fromChar unaryOp
                         ++ b
-                        |> Parser.run expression
+                        |> expression
                         |> Expect.equal (expectedAst)
         , describe "Operator precedence"
             [ makePrecedenceTest "( 7 + 8 )"
@@ -104,6 +103,7 @@ tests =
             , makePrecedenceTest "( 2 + ( - 6 ) )"
             , makePrecedenceTest "( ( + str ) - 19 )"
             , makePrecedenceTest "( ( 8 * ( - 2 ) ) - ( STR / 7 ) )"
+            , makePrecedenceTest "( 2 - ( 4 / ( - 8 ) ) )"
             ]
         ]
 
@@ -123,6 +123,6 @@ makePrecedenceTest withParenthesis =
         <|
             \() ->
                 withoutParenthesis
-                    |> Parser.run expression
+                    |> expression
                     |> Result.map Expression.stringify
                     |> Expect.equal (Ok withParenthesis)

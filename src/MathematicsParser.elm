@@ -12,157 +12,240 @@ A string expression is converted into an abstract syntax tree.
 -}
 
 import Char
-import Set exposing (Set)
-import Parser exposing (Parser, (|.), (|=))
-import Expression exposing (Expression, binaryOperators)
+import Set
+import Expression exposing (Expression)
+import ParseError exposing (ParseError)
+import ParseState exposing (ParseState)
+import MaDebug
 
 
-{-| A mathematical expression.
+{-| A parser that converts a string into a mathematical expression.
 -}
 type alias MathematicsParser =
-    Parser Expression
+    String -> Result ParseError Expression
 
 
-{-| Parse expressions.
+type alias StateParser =
+    ParseState -> Result ParseError Expression
+
+
+{-| }
+} Parse an expression.
 -}
-expression : Parser Expression
-expression =
-    List.foldr
-        (\opChars nextParser -> binaryOperators opChars nextParser)
-        (unaryOperators Expression.unaryOperators symbolParser)
-        Expression.binaryOperators
-        |. Parser.end
+expression : MathematicsParser
+expression str =
+    { source = str
+    , start = 0
+    }
+        |> MaDebug.log "Expression"
+        |> ParseState.trimState
+        |> List.foldr
+            (\opChars nextParser -> binaryOperators opChars nextParser)
+            (unaryOperators (Expression.unaryOperators |> Set.toList) symbol)
+            (Expression.binaryOperators |> List.map Set.toList)
+        |> Result.mapError
+            (\({ parseStack } as parseError) ->
+                { parseError | parseStack = ParseError.Expression :: parseStack }
+            )
 
 
 
 -- Parsers --
 
 
-binaryOperators : Set Char -> Parser Expression -> Parser Expression
+binaryOperators : List Char -> StateParser -> StateParser
 binaryOperators opChars nextParser =
-    Parser.inContext ("binary operators " ++ String.join ", " (Set.toList <| Set.map String.fromChar opChars)) <|
-        Parser.oneOf
-            [ Parser.delayedCommitMap toBinaryOp (spaceIgnoringParser nextParser) <|
-                Parser.succeed identity
-                    |= Parser.repeat Parser.oneOrMore
-                        (Parser.succeed (,)
-                            |= operatorSymbol opChars
-                            |= spaceIgnoringParser nextParser
-                        )
-            , spaceIgnoringParser nextParser
-            ]
+    checkEmptyState (binaryOperatorsSkipping 0 opChars nextParser)
 
 
-unaryOperators : Set Char -> Parser Expression -> Parser Expression
+unaryOperators : List Char -> StateParser -> StateParser
 unaryOperators opChars nextParser =
-    let
-        checkNotAnotherUnary =
-            Parser.oneOf
-                [ Parser.succeed (Expression.Symbol "")
-                    |. spaceIgnoringParser (operatorSymbol opChars)
-                    |. Parser.fail "Cannot have two unary operators one after the other"
-                , nextParser
-                ]
-    in
-        Parser.inContext ("unary operators " ++ String.join ", " (Set.toList <| Set.map String.fromChar opChars)) <|
-            Parser.oneOf
-                [ Parser.succeed Expression.UnaryOperator
-                    |= spaceIgnoringParser (operatorSymbol opChars)
-                    |= spaceIgnoringParser nextParser
-                , spaceIgnoringParser nextParser
-                ]
+    checkEmptyState
+        (\({ source, start } as state) ->
+            case String.uncons (MaDebug.log "UnaryOperator" source) of
+                Just ( op, rhs ) ->
+                    if List.any (\c -> c == op) opChars then
+                        let
+                            parsedRhs =
+                                { source = rhs
+                                , start = start + 1
+                                }
+                                    |> ParseState.trimState
+                                    |> nextParser
+                                    |> Result.mapError
+                                        (\({ parseStack } as parseError) ->
+                                            { parseError | parseStack = ParseError.UnaryOperator op :: parseStack }
+                                        )
+                        in
+                            Result.map
+                                (Expression.UnaryOperator op)
+                                parsedRhs
+                    else
+                        nextParser state
 
-
-spaceIgnoringParser : Parser a -> Parser a
-spaceIgnoringParser parser =
-    Parser.succeed identity
-        |. spaces
-        |= parser
-        |. spaces
-
-
-operatorSymbol : Set Char -> Parser Char
-operatorSymbol opSymbols =
-    Parser.oneOf
-        (List.map
-            (\c ->
-                Parser.symbol (String.fromChar c)
-                    |> Parser.map (always c)
-            )
-            (Set.toList opSymbols)
+                Nothing ->
+                    nextParser state
         )
 
 
-symbolParser : Parser Expression
-symbolParser =
-    Parser.keep Parser.oneOrMore isValidSymbolChar
-        |> Parser.andCatch (\problem -> Parser.fail "Required a valid symbol character")
-        |> Parser.map Expression.Symbol
-        |> Parser.inContext "symbol"
+symbol : StateParser
+symbol =
+    checkEmptyState
+        (\({ source, start } as state) ->
+            case symbolHelper (MaDebug.log "Symbol" state) of
+                Nothing ->
+                    Ok <| Expression.Symbol source
 
-
-spaces : Parser ()
-spaces =
-    Parser.ignore Parser.zeroOrMore (\c -> c == ' ')
-
-
-charInRange lower upper =
-    let
-        testInRange lower upper char =
-            let
-                lowerNum =
-                    Char.toCode lower
-
-                upperNum =
-                    Char.toCode upper
-
-                charNum =
-                    Char.toCode char
-            in
-                charNum >= lowerNum && charNum <= upperNum
-    in
-        Parser.keep Parser.oneOrMore (testInRange 'a' 'z')
+                Just error ->
+                    Err error
+        )
 
 
 
 -- Helper Functions --
 
 
-toBinaryOp : Expression -> List ( Char, Expression ) -> Expression
-toBinaryOp expression rhsExtraList =
-    case rhsExtraList of
-        [] ->
-            expression
+checkEmptyState : StateParser -> StateParser
+checkEmptyState nextParser ({ source, start } as state) =
+    case source of
+        "" ->
+            Err
+                { position = start
+                , errorType = ParseError.EmptyString
+                , parseStack = []
+                }
 
-        ( op, nextRhs ) :: futureRhs ->
-            toBinaryOp (Expression.BinaryOperator expression op nextRhs) futureRhs
+        _ ->
+            nextParser state
+
+
+binaryOperatorsSkipping : Int -> List Char -> StateParser -> StateParser
+binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state) =
+    let
+        label =
+            opChars
+                |> List.map String.fromChar
+                |> String.join ", "
+                |> String.append "BinaryOperators "
+    in
+        case ParseState.splitStateSkipping numToSkip opChars (MaDebug.log label state) of
+            Just ( lhs, op, rhsAndMore ) ->
+                let
+                    parsedLhsResult =
+                        lhs
+                            |> ParseState.trimState
+                            |> nextParser
+                            |> Result.mapError
+                                (\({ parseStack } as parseError) ->
+                                    { parseError | parseStack = (ParseError.BinaryOperator op ParseError.LeftHandSide) :: parseStack }
+                                )
+                in
+                    case parsedLhsResult of
+                        Ok parsedLhs ->
+                            binaryOpRhsHelper 0 opChars nextParser parsedLhs op (ParseState.trimState rhsAndMore)
+
+                        Err parseError ->
+                            case parseError.errorType of
+                                ParseError.EmptyString ->
+                                    binaryOperatorsSkipping (numToSkip + 1) opChars nextParser state
+
+                                _ ->
+                                    Err parseError
+
+            Nothing ->
+                nextParser state
+
+
+binaryOpRhsHelper : Int -> List Char -> StateParser -> Expression -> Char -> ParseState -> Result ParseError Expression
+binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
+    case ParseState.splitStateSkipping numToSkip opChars rhsAndMore of
+        Just ( nextRhs, nextOp, moreRhs ) ->
+            let
+                parsedRhs =
+                    nextRhs
+                        |> ParseState.trimState
+                        |> nextParser
+                        |> Result.mapError
+                            (\({ parseStack } as parseError) ->
+                                { parseError | parseStack = (ParseError.BinaryOperator op ParseError.RightHandSide) :: parseStack }
+                            )
+            in
+                case parsedRhs of
+                    Ok rhs ->
+                        binaryOpRhsHelper
+                            0
+                            opChars
+                            nextParser
+                            (Expression.BinaryOperator lhs op rhs)
+                            nextOp
+                            moreRhs
+
+                    Err parseError ->
+                        case parseError.errorType of
+                            ParseError.EmptyString ->
+                                binaryOpRhsHelper (numToSkip + 1) opChars nextParser lhs op rhsAndMore
+
+                            _ ->
+                                Err parseError
+
+        Nothing ->
+            rhsAndMore
+                |> ParseState.trimState
+                |> nextParser
+                |> Result.mapError
+                    (\({ parseStack } as parseError) ->
+                        { parseError | parseStack = (ParseError.BinaryOperator op ParseError.RightHandSide) :: parseStack }
+                    )
+                |> Result.map (Expression.BinaryOperator lhs op)
+
+
+symbolHelper : ParseState -> Maybe ParseError
+symbolHelper ({ source, start } as state) =
+    String.uncons source
+        |> Maybe.andThen
+            (\( firstChar, rest ) ->
+                if isValidSymbolChar firstChar then
+                    symbolHelper
+                        { state
+                            | source = rest
+                            , start = start + 1
+                        }
+                else
+                    Just
+                        { position = start
+                        , errorType = ParseError.InvalidChar firstChar
+                        , parseStack = [ ParseError.Symbol ]
+                        }
+            )
 
 
 isValidSymbolChar : Char -> Bool
 isValidSymbolChar charToTest =
     let
-        testInRange lower upper char =
-            let
-                lowerNum =
-                    Char.toCode lower
-
-                upperNum =
-                    Char.toCode upper
-
-                charNum =
-                    Char.toCode char
-            in
-                charNum >= lowerNum && charNum <= upperNum
-
         isNumber =
-            testInRange '0' '9'
+            isCharInRange '0' '9'
 
         isLowerEnglish =
-            testInRange 'a' 'z'
+            isCharInRange 'a' 'z'
 
         isUpperEnglish =
-            testInRange 'A' 'Z'
+            isCharInRange 'A' 'Z'
     in
         isNumber charToTest
             || isLowerEnglish charToTest
             || isUpperEnglish charToTest
+
+
+isCharInRange : Char -> Char -> Char -> Bool
+isCharInRange lower upper char =
+    let
+        lowerNum =
+            Char.toCode lower
+
+        upperNum =
+            Char.toCode upper
+
+        charNum =
+            Char.toCode char
+    in
+        charNum >= lowerNum && charNum <= upperNum
