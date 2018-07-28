@@ -32,6 +32,7 @@ symbolChar =
             [ ( 8, lowerCase )
             , ( 4, upperCase )
             , ( 1, number )
+            , ( 0.1, Fuzz.constant (Char.toCode '.'))
             ]
             |> Fuzz.map (Char.fromCode)
 

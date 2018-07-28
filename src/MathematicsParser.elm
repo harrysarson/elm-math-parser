@@ -234,6 +234,7 @@ isValidSymbolChar charToTest =
         isNumber charToTest
             || isLowerEnglish charToTest
             || isUpperEnglish charToTest
+            || charToTest == '.'
 
 
 isCharInRange : Char -> Char -> Char -> Bool
