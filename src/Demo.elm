@@ -5,7 +5,6 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 import Dom
 import Task
-import Parser exposing (run)
 import MathematicsParser exposing (expression)
 import Expression exposing (stringify)
 
