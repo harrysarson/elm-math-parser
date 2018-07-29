@@ -44,8 +44,7 @@ expression str =
 -- Parsers --
 
 
-{-| }
-} Parse an expression.
+{-| Parse an expression.
 -}
 stateExpression : StateParser
 stateExpression =
