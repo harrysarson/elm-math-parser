@@ -31,6 +31,7 @@ unaryOperators =
 type Expression
     = BinaryOperator Expression Char Expression
     | UnaryOperator Char Expression
+    | Parentheses Expression
     | Symbol String
 
 
@@ -51,6 +52,9 @@ stringify expression =
 
             UnaryOperator op expr ->
                 String.fromChar op ++ " " ++ stringifyWithParentheses expr
+
+            Parentheses expr ->
+                stringifyWithParentheses expr
 
             Symbol str ->
                 str

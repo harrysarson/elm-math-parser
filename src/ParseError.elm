@@ -32,6 +32,7 @@ binary operator.
 type ErrorType
     = EmptyString
     | InvalidChar Char
+    | MissingClosingParenthesis
 
 
 {-| Different parser functions used to track the location of a parsing error.
@@ -40,6 +41,7 @@ type ParseFunction
     = Symbol
     | BinaryOperator Char Side
     | UnaryOperator Char
+    | Parentheses
     | Expression
 
 

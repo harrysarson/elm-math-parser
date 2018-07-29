@@ -37,20 +37,28 @@ expression str =
     { source = str
     , start = 0
     }
-        |> MaDebug.log "Expression"
-        |> ParseState.trimState
-        |> List.foldr
-            (\opChars nextParser -> binaryOperators opChars nextParser)
-            (unaryOperators (Expression.unaryOperators |> Set.toList) symbol)
-            (Expression.binaryOperators |> List.map Set.toList)
-        |> Result.mapError
-            (\({ parseStack } as parseError) ->
-                { parseError | parseStack = ParseError.Expression :: parseStack }
-            )
+        |> stateExpression
 
 
 
 -- Parsers --
+
+
+{-| }
+} Parse an expression.
+-}
+stateExpression : StateParser
+stateExpression =
+    MaDebug.log "Expression"
+        >> ParseState.trimState
+        >> List.foldr
+            (\opChars nextParser -> binaryOperators opChars nextParser)
+            (unaryOperators (Expression.unaryOperators |> Set.toList) (parenthesis symbol))
+            (Expression.binaryOperators |> List.map Set.toList)
+        >> Result.mapError
+            (\({ parseStack } as parseError) ->
+                { parseError | parseStack = ParseError.Expression :: parseStack }
+            )
 
 
 binaryOperators : List Char -> StateParser -> StateParser
@@ -80,6 +88,39 @@ unaryOperators opChars nextParser =
                             Result.map
                                 (Expression.UnaryOperator op)
                                 parsedRhs
+                    else
+                        nextParser state
+
+                Nothing ->
+                    nextParser state
+        )
+
+
+parenthesis : StateParser -> StateParser
+parenthesis nextParser =
+    checkEmptyState
+        (\({ source, start } as state) ->
+            case String.uncons (MaDebug.log "Parentheses" source) of
+                Just ( possiblyOpenParenthesis, rest ) ->
+                    if possiblyOpenParenthesis == '(' then
+                        if String.endsWith ")" rest then
+                            rest
+                                |> String.dropRight 1
+                                |> \parenthesisContent ->
+                                    { source = parenthesisContent
+                                    , start = start + 1
+                                    }
+                                        |> stateExpression
+                                        |> Result.mapError
+                                            (\({ parseStack } as parseError) ->
+                                                { parseError | parseStack = ParseError.Parentheses :: parseStack }
+                                            )
+                        else
+                            Err
+                                { errorType = ParseError.MissingClosingParenthesis
+                                , position = start + String.length source - 1
+                                , parseStack = [ ParseError.Parentheses ]
+                                }
                     else
                         nextParser state
 

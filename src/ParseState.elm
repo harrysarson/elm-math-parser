@@ -42,7 +42,7 @@ source of the state.
 -}
 splitStateSkipping : Int -> List Char -> ParseState -> Maybe ( ParseState, Char, ParseState )
 splitStateSkipping n chars ({ start, source } as state) =
-    findNthOneOfHelper n chars "" state.source 0
+    findNthOneOfHelper n chars 0 "" state.source 0
         |> Maybe.map
             (\( left, splitChar, right, leftSize ) ->
                 ( { source = left
@@ -66,18 +66,44 @@ trimState =
     trimStart >> trimEnd
 
 
-findNthOneOfHelper : Int -> List Char -> String -> String -> Int -> Maybe ( String, Char, String, Int )
-findNthOneOfHelper n chars previousReversed source index =
+findClosingParenthesis : String -> String -> Int -> Maybe ( String, Int )
+findClosingParenthesis previousReversed source index =
+    String.uncons source
+        |> Maybe.andThen
+            (\( possiblyCloseParenthesis, rest ) ->
+                if possiblyCloseParenthesis == ')' then
+                    Just ( String.reverse previousReversed, index )
+                else
+                    findClosingParenthesis (String.cons possiblyCloseParenthesis previousReversed) rest (index + 1)
+            )
+
+
+
+-- todo: missing open or closing parenthesis
+
+
+findNthOneOfHelper : Int -> List Char -> Int -> String -> String -> Int -> Maybe ( String, Char, String, Int )
+findNthOneOfHelper n chars closesRequired previousReversed source index =
     String.uncons source
         |> Maybe.andThen
             (\( first, rest ) ->
-                if List.any (\c -> c == first) chars then
-                    if n == 0 then
-                        Just ( String.reverse previousReversed, first, rest, index )
-                    else
-                        findNthOneOfHelper (n - 1) chars (String.cons first previousReversed) rest (index + 1)
-                else
-                    findNthOneOfHelper n chars (String.cons first previousReversed) rest (index + 1)
+                case closesRequired of
+                    0 ->
+                        if first == '(' then
+                            findNthOneOfHelper n chars 1 (String.cons first previousReversed) rest (index + 1)
+                        else if List.any (\c -> c == first) chars then
+                            if n == 0 then
+                                Just ( String.reverse previousReversed, first, rest, index )
+                            else
+                                findNthOneOfHelper (n - 1) chars 0 (String.cons first previousReversed) rest (index + 1)
+                        else
+                            findNthOneOfHelper n chars 0 (String.cons first previousReversed) rest (index + 1)
+
+                    _ ->
+                        if first == ')' then
+                            findNthOneOfHelper n chars (closesRequired - 1) (String.cons first previousReversed) rest (index + 1)
+                        else
+                            findNthOneOfHelper n chars closesRequired (String.cons first previousReversed) rest (index + 1)
             )
 
 
