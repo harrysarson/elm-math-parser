@@ -230,11 +230,14 @@ isValidSymbolChar charToTest =
 
         isUpperEnglish =
             isCharInRange 'A' 'Z'
+
+        isPeriod =
+            (==) '.'
     in
         isNumber charToTest
             || isLowerEnglish charToTest
             || isUpperEnglish charToTest
-            || charToTest == '.'
+            || isPeriod charToTest
 
 
 isCharInRange : Char -> Char -> Char -> Bool
