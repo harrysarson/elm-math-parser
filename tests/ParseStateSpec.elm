@@ -71,29 +71,67 @@ tests =
                                   }
                                 )
                             )
-            , fuzz MaFuzz.parseState "splitting on first character" <|
-                \({ source, start } as state) ->
+            , fuzz (Fuzz.tuple ( fuzzNonParenthesisChar, MaFuzz.parseState )) "splitting on first character" <|
+                \( firstChar, { source, start } as state ) ->
                     let
                         listOfAscii =
                             List.range 0 255
                                 |> List.map Char.fromCode
                     in
-                        state
+                        { state | source = String.cons firstChar source }
                             |> splitStateSkipping 0 listOfAscii
                             |> Expect.equal
-                                (String.uncons source
-                                    |> Maybe.map
-                                        (\( firstChar, rest ) ->
-                                            ( { source = ""
-                                              , start = start
-                                              }
-                                            , firstChar
-                                            , { source = rest
-                                              , start = start + 1
-                                              }
-                                            )
-                                        )
+                                (Just
+                                    ( { source = ""
+                                      , start = start
+                                      }
+                                    , firstChar
+                                    , { source = source
+                                      , start = start + 1
+                                      }
+                                    )
                                 )
+            , fuzz Fuzz.int "respects parentheses" <|
+                \start ->
+                    { source = "The (quick brown fox jumps) over the lazy dog."
+                    , start = start
+                    }
+                        |> splitStateSkipping 0 [ 'q', 'o' ]
+                        |> Expect.equal
+                            (Just
+                                ( { source = "The (quick brown fox jumps) "
+                                  , start = start
+                                  }
+                                , 'o'
+                                , { source = "ver the lazy dog."
+                                  , start = start + 29
+                                  }
+                                )
+                            )
+            , fuzz Fuzz.int "ignores every character after opening parentheses" <|
+                \start ->
+                    { source = "Th(e quick brown fox jumps over the lazy dog."
+                    , start = start
+                    }
+                        |> splitStateSkipping 0 [ 'q', 'e' ]
+                        |> Expect.equal Nothing
+            , fuzz Fuzz.int "splits on character before an opening parentheses" <|
+                \start ->
+                    { source = "The q(uick brown fox jumps over the lazy dog."
+                    , start = start
+                    }
+                        |> splitStateSkipping 0 [ 'q', 'o' ]
+                        |> Expect.equal
+                            (Just
+                                ( { source = "The "
+                                  , start = start
+                                  }
+                                , 'q'
+                                , { source = "(uick brown fox jumps over the lazy dog."
+                                  , start = start + 5
+                                  }
+                                )
+                            )
             ]
         , describe "trim state"
             [ fuzz MaFuzz.parseState "agrees with String.trim" <|
@@ -104,3 +142,13 @@ tests =
                         |> Expect.equal (String.trim source)
             ]
         ]
+
+
+fuzzNonParenthesisChar : Fuzz.Fuzzer Char
+fuzzNonParenthesisChar =
+    Fuzz.char
+        |> Fuzz.conditional
+            { retries = 10
+            , fallback = Char.fromCode << (-) 1 << Char.toCode
+            , condition = (\c -> c /= '(')
+            }
