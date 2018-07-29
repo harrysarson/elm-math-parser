@@ -36,12 +36,21 @@ type Expression
 
 stringify : Expression -> String
 stringify expression =
-    case expression of
-        BinaryOperator lhs op rhs ->
-            "( " ++ stringify lhs ++ " " ++ String.fromChar op ++ " " ++ stringify rhs ++ " )"
+    let
+        stringifyWithParentheses expression =
+            case expression of
+                Symbol _ ->
+                    stringify expression
 
-        UnaryOperator op expr ->
-            "( " ++ String.fromChar op ++ " " ++ stringify expr ++ " )"
+                _ ->
+                    "( " ++ stringify expression ++ " )"
+    in
+        case expression of
+            BinaryOperator lhs op rhs ->
+                stringifyWithParentheses lhs ++ " " ++ String.fromChar op ++ " " ++ stringifyWithParentheses rhs
 
-        Symbol str ->
-            str
+            UnaryOperator op expr ->
+                String.fromChar op ++ " " ++ stringifyWithParentheses expr
+
+            Symbol str ->
+                str
