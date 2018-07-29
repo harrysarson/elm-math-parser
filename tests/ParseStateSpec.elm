@@ -149,6 +149,23 @@ tests =
                                   }
                                 )
                             )
+            , fuzz Fuzz.int "be lenient with unmatched parentheses" <|
+                \start ->
+                    { source = "The q)uick b(rown fox jum)ps over the lazy dog."
+                    , start = start
+                    }
+                        |> splitStateSkipping 1 [ 'u', 'o' ]
+                        |> Expect.equal
+                            (Just
+                                ( { source = "The q)uick b(rown fox jum)ps "
+                                  , start = start
+                                  }
+                                , 'o'
+                                , { source = "ver the lazy dog."
+                                  , start = start + 30
+                                  }
+                                )
+                            )
             ]
         , describe "trim state"
             [ fuzz MaFuzz.parseState "agrees with String.trim" <|
