@@ -100,10 +100,15 @@ findNthOneOfHelper n chars closesRequired previousReversed source index =
                             findNthOneOfHelper n chars 0 (String.cons first previousReversed) rest (index + 1)
 
                     _ ->
-                        if first == ')' then
-                            findNthOneOfHelper n chars (closesRequired - 1) (String.cons first previousReversed) rest (index + 1)
-                        else
-                            findNthOneOfHelper n chars closesRequired (String.cons first previousReversed) rest (index + 1)
+                        case first of
+                            ')' ->
+                                findNthOneOfHelper n chars (closesRequired - 1) (String.cons first previousReversed) rest (index + 1)
+
+                            '(' ->
+                                findNthOneOfHelper n chars (closesRequired + 1) (String.cons first previousReversed) rest (index + 1)
+
+                            _ ->
+                                findNthOneOfHelper n chars closesRequired (String.cons first previousReversed) rest (index + 1)
             )
 
 

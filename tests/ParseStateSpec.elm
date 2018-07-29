@@ -132,6 +132,23 @@ tests =
                                   }
                                 )
                             )
+            , fuzz Fuzz.int "respects nested parentheses" <|
+                \start ->
+                    { source = "The q(uick bro(wn fox jum)ps over the lazy d)og."
+                    , start = start
+                    }
+                        |> splitStateSkipping 1 [ 'q', 'o' ]
+                        |> Expect.equal
+                            (Just
+                                ( { source = "The q(uick bro(wn fox jum)ps over the lazy d)"
+                                  , start = start
+                                  }
+                                , 'o'
+                                , { source = "g."
+                                  , start = start + 46
+                                  }
+                                )
+                            )
             ]
         , describe "trim state"
             [ fuzz MaFuzz.parseState "agrees with String.trim" <|
