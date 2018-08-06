@@ -5,11 +5,12 @@ import Set
 import Expression exposing (Expression)
 import ParseError exposing (ParseError)
 import ParseState exposing (ParseState)
+import ParseResult exposing (ParseResult)
 import MaDebug
 
 
 type alias StateParser =
-    ParseState -> Result ParseError Expression
+    ParseState -> Result ParseError ParseResult
 
 
 {-| Parse an expression.
@@ -53,7 +54,9 @@ unaryOperators opChars nextParser =
                                         )
                         in
                             Result.map
-                                (Expression.UnaryOperator op)
+                                (\({ expression } as parseResult) ->
+                                    { parseResult | expression = Expression.UnaryOperator op expression }
+                                )
                                 parsedRhs
                     else
                         nextParser state
@@ -102,7 +105,10 @@ symbol =
         (\({ source, start } as state) ->
             case symbolHelper (MaDebug.log "Symbol" state) of
                 Nothing ->
-                    Ok <| Expression.Symbol source
+                    Ok <|
+                        { expression = Expression.Symbol source
+                        , symbols = [ ( source, start ) ]
+                        }
 
                 Just error ->
                     Err error
@@ -164,7 +170,7 @@ binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state
                 nextParser state
 
 
-binaryOpRhsHelper : Int -> List Char -> StateParser -> Expression -> Char -> ParseState -> Result ParseError Expression
+binaryOpRhsHelper : Int -> List Char -> StateParser -> ParseResult -> Char -> StateParser
 binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
     case ParseState.splitStateSkipping numToSkip opChars rhsAndMore of
         Just ( nextRhs, nextOp, moreRhs ) ->
@@ -184,7 +190,9 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                             0
                             opChars
                             nextParser
-                            (Expression.BinaryOperator lhs op rhs)
+                            { expression = (Expression.BinaryOperator lhs.expression op rhs.expression)
+                            , symbols = lhs.symbols ++ rhs.symbols
+                            }
                             nextOp
                             moreRhs
 
@@ -202,9 +210,16 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                 |> nextParser
                 |> Result.mapError
                     (\({ parseStack } as parseError) ->
-                        { parseError | parseStack = (ParseError.BinaryOperator op ParseError.RightHandSide) :: parseStack }
+                        { parseError
+                            | parseStack = (ParseError.BinaryOperator op ParseError.RightHandSide) :: parseStack
+                        }
                     )
-                |> Result.map (Expression.BinaryOperator lhs op)
+                |> Result.map
+                    (\rhs ->
+                        { expression = (Expression.BinaryOperator lhs.expression op rhs.expression)
+                        , symbols = lhs.symbols ++ rhs.symbols
+                        }
+                    )
 
 
 symbolHelper : ParseState -> Maybe ParseError

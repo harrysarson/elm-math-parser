@@ -1,6 +1,6 @@
 module Demo exposing (main)
 
-import Html exposing (Html, Attribute, program, text, div, input, ol, li)
+import Html exposing (Html, Attribute, program, text, div, input, ol, li, table, tr, td, span)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 import Dom
@@ -9,10 +9,12 @@ import MathematicsParser exposing (expression)
 import Expression exposing (stringify)
 
 
+initialModel : String
 initialModel =
     "4 + 8"
 
 
+main : Program Never String Msg
 main =
     program
         { init = ( initialModel, Task.attempt (always FocusResult) (Dom.focus "expression-input") )
@@ -31,6 +33,7 @@ type Msg
     | FocusResult
 
 
+update : Msg -> String -> ( String, Cmd msg )
 update msg oldContent =
     case msg of
         NewContent content ->
@@ -44,6 +47,7 @@ update msg oldContent =
 -- VIEW
 
 
+flipResult : Result value a -> Result a value
 flipResult result =
     case result of
         Err err ->
@@ -53,6 +57,7 @@ flipResult result =
             Err val
 
 
+view : String -> Html Msg
 view content =
     let
         parsed =
@@ -106,6 +111,10 @@ view content =
              , error
                 |> Maybe.map .parseStack
                 |> Maybe.map
+                    (always <| span [] [ text "Parser stack" ])
+             , error
+                |> Maybe.map .parseStack
+                |> Maybe.map
                     (\stack ->
                         ol [] <| List.map (\fun -> li [] [ text <| toString fun ]) stack
                     )
@@ -117,7 +126,27 @@ view content =
                     )
              , Just <| div [] [ text (toString parsed) ]
              , parsed
-                |> Result.map (\p -> div [] [ text (stringify p) ])
+                |> Result.map (\p -> div [] [ text (stringify p.expression) ])
+                |> Result.toMaybe
+             , parsed
+                |> Result.map .symbols
+                |> Result.map
+                    (\symbols ->
+                        table
+                            [ style [ ( "border-collapse", "collapse" ), ( "text-align", "center" ) ] ]
+                            ((tr [ style [ ( "border-bottom", "1px solid black" ) ] ]
+                                [ td [] [ text "Symbol" ]
+                                , td [] [ text "Index" ]
+                                ]
+                             )
+                                :: (symbols
+                                        |> List.map
+                                            (\( symbol, index ) ->
+                                                tr [] [ td [] [ text symbol ], td [] [ text <| toString index ] ]
+                                            )
+                                   )
+                            )
+                    )
                 |> Result.toMaybe
              ]
                 |> justList
@@ -139,6 +168,7 @@ justList list =
                     justList rest
 
 
+myStyle : Attribute msg
 myStyle =
     style
         [ ( "padding", "1em 1em" )
@@ -147,8 +177,14 @@ myStyle =
         ]
 
 
+inputStyle : Attribute msg
 inputStyle =
     style
         [ ( "width", "100%" )
         , ( "font", "inherit" )
         ]
+
+
+tableStyle : Attribute msg
+tableStyle =
+    style [ ( "border-collapse", "collapse" ) ]

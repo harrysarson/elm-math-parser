@@ -23,16 +23,43 @@ tests =
           <|
             \( lhs, op, rhs ) ->
                 let
-                    expectedAst =
+                    trimmedLhs =
+                        String.trim lhs
+
+                    trimmedRhs =
+                        String.trim rhs
+
+                    parseResult =
                         Ok <|
-                            Expression.BinaryOperator
-                                (Expression.Symbol (String.trim lhs))
-                                op
-                                (Expression.Symbol (String.trim rhs))
+                            { expression =
+                                Expression.BinaryOperator
+                                    (Expression.Symbol trimmedLhs)
+                                    op
+                                    (Expression.Symbol trimmedRhs)
+                            , symbols =
+                                [ ( trimmedLhs, lhs, 0 )
+                                , ( trimmedRhs, rhs, String.length lhs + 1 )
+                                ]
+                                    |> List.map
+                                        (\( trimmed, untrimmed, add ) ->
+                                            ( trimmed
+                                            , case
+                                                untrimmed
+                                                    |> String.indexes trimmed
+                                                    |> List.head
+                                              of
+                                                Just index ->
+                                                    index + add
+
+                                                Nothing ->
+                                                    Debug.crash <| "trimmed string " ++ toString trimmed ++ " surely must be contained within untrimmed string " ++ toString untrimmed
+                                            )
+                                        )
+                            }
                 in
                     (lhs ++ String.fromChar op ++ rhs)
                         |> expression
-                        |> Expect.equal (expectedAst)
+                        |> Expect.equal parseResult
         , fuzz
             (Fuzz.tuple4
                 ( MaFuzz.binaryOperator
@@ -62,7 +89,8 @@ tests =
                         ++ String.fromChar op
                         ++ c
                         |> expression
-                        |> Expect.equal (expectedAst)
+                        |> Result.map .expression
+                        |> Expect.equal expectedAst
         , fuzz
             (Fuzz.tuple5
                 ( MaFuzz.addSpaces MaFuzz.symbol
@@ -92,7 +120,8 @@ tests =
                         ++ String.fromChar unaryOp
                         ++ b
                         |> expression
-                        |> Expect.equal (expectedAst)
+                        |> Result.map .expression
+                        |> Expect.equal expectedAst
         , describe "Operator precedence"
             [ makePrecedenceTest "7 + 8"
             , makePrecedenceTest "( aA0 - bB1 ) + cC2"
@@ -124,5 +153,6 @@ makePrecedenceTest withParenthesis =
             \() ->
                 withoutParenthesis
                     |> expression
+                    |> Result.map .expression
                     |> Result.map Expression.stringify
                     |> Expect.equal (Ok withParenthesis)
