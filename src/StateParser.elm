@@ -3,14 +3,14 @@ module StateParser exposing (StateParser, expression)
 import Char
 import Expression exposing (Expression)
 import MaDebug
-import ParseError exposing (ParseError)
 import ParseResult exposing (ParseResult)
+import ParserError exposing (ParserError)
 import ParserState exposing (ParserState)
 import Set
 
 
 type alias StateParser =
-    ParserState -> Result ParseError ParseResult
+    ParserState -> Result ParserError ParseResult
 
 
 {-| Parse an expression.
@@ -25,7 +25,7 @@ expression =
             (Expression.binaryOperators |> List.map Set.toList)
         >> Result.mapError
             (\({ parseStack } as parseError) ->
-                { parseError | parseStack = ParseError.Expression :: parseStack }
+                { parseError | parseStack = ParserError.Expression :: parseStack }
             )
 
 
@@ -54,7 +54,7 @@ unaryOperators opChars nextParser =
                                     |> nextParser
                                     |> Result.mapError
                                         (\({ parseStack } as parseError) ->
-                                            { parseError | parseStack = ParseError.UnaryOperator op :: parseStack }
+                                            { parseError | parseStack = ParserError.UnaryOperator op :: parseStack }
                                         )
                         in
                         Result.map
@@ -93,9 +93,9 @@ parenthesis nextParser =
                                             |> Result.mapError
                                                 (\parseError ->
                                                     case parseError.errorType of
-                                                        ParseError.EmptyString ->
+                                                        ParserError.EmptyString ->
                                                             { position = start + 1
-                                                            , errorType = ParseError.EmptyParentheses
+                                                            , errorType = ParserError.EmptyParentheses
                                                             , parseStack = []
                                                             }
 
@@ -104,15 +104,15 @@ parenthesis nextParser =
                                                 )
                                             |> Result.mapError
                                                 (\({ parseStack } as parseError) ->
-                                                    { parseError | parseStack = ParseError.Parentheses :: parseStack }
+                                                    { parseError | parseStack = ParserError.Parentheses :: parseStack }
                                                 )
                                    )
 
                         else
                             Err
-                                { errorType = ParseError.MissingClosingParenthesis
+                                { errorType = ParserError.MissingClosingParenthesis
                                 , position = start + String.length source - 1
-                                , parseStack = [ ParseError.Parentheses ]
+                                , parseStack = [ ParserError.Parentheses ]
                                 }
 
                     else
@@ -149,7 +149,7 @@ checkEmptyState nextParser ({ source, start } as state) =
         "" ->
             Err
                 { position = start
-                , errorType = ParseError.EmptyString
+                , errorType = ParserError.EmptyString
                 , parseStack = []
                 }
 
@@ -175,7 +175,7 @@ binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state
                         |> nextParser
                         |> Result.mapError
                             (\({ parseStack } as parseError) ->
-                                { parseError | parseStack = ParseError.BinaryOperator op ParseError.LeftHandSide :: parseStack }
+                                { parseError | parseStack = ParserError.BinaryOperator op ParserError.LeftHandSide :: parseStack }
                             )
             in
             case parsedLhsResult of
@@ -184,7 +184,7 @@ binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state
 
                 Err parseError ->
                     case parseError.errorType of
-                        ParseError.EmptyString ->
+                        ParserError.EmptyString ->
                             binaryOperatorsSkipping (numToSkip + 1) opChars nextParser state
 
                         _ ->
@@ -205,7 +205,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                         |> nextParser
                         |> Result.mapError
                             (\({ parseStack } as parseError) ->
-                                { parseError | parseStack = ParseError.BinaryOperator op ParseError.RightHandSide :: parseStack }
+                                { parseError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
                             )
             in
             case parsedRhs of
@@ -222,7 +222,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
 
                 Err parseError ->
                     case parseError.errorType of
-                        ParseError.EmptyString ->
+                        ParserError.EmptyString ->
                             binaryOpRhsHelper (numToSkip + 1) opChars nextParser lhs op rhsAndMore
 
                         _ ->
@@ -235,7 +235,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                 |> Result.mapError
                     (\({ parseStack } as parseError) ->
                         { parseError
-                            | parseStack = ParseError.BinaryOperator op ParseError.RightHandSide :: parseStack
+                            | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack
                         }
                     )
                 |> Result.map
@@ -246,7 +246,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                     )
 
 
-symbolHelper : ParserState -> Maybe ParseError
+symbolHelper : ParserState -> Maybe ParserError
 symbolHelper ({ source, start } as state) =
     String.uncons source
         |> Maybe.andThen
@@ -261,8 +261,8 @@ symbolHelper ({ source, start } as state) =
                 else
                     Just
                         { position = start
-                        , errorType = ParseError.InvalidChar firstChar
-                        , parseStack = [ ParseError.Symbol ]
+                        , errorType = ParserError.InvalidChar firstChar
+                        , parseStack = [ ParserError.Symbol ]
                         }
             )
 

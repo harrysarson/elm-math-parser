@@ -17,8 +17,8 @@ A string expression is converted into an abstract syntax tree.
 import Char
 import Expression exposing (Expression)
 import MaDebug
-import ParseError exposing (ParseError)
 import ParseResult exposing (ParseResult)
+import ParserError exposing (ParserError)
 import Set
 import StateParser
 
@@ -26,7 +26,7 @@ import StateParser
 {-| A parser that converts a string into a mathematical expression.
 -}
 type alias MathematicsParser =
-    String -> Result ParseError ParseResult
+    String -> Result ParserError ParseResult
 
 
 {-| }

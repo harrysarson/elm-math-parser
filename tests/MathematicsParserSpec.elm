@@ -5,7 +5,7 @@ import Expression exposing (Expression)
 import Fuzz
 import MaFuzz
 import MathematicsParser exposing (expression)
-import ParseError
+import ParserError
 import String
 import Test exposing (describe, fuzz, fuzz2, fuzz3, test)
 
@@ -150,7 +150,7 @@ tests =
                             [ Result.mapError .position
                                 >> Expect.equal (Err 5)
                             , Result.mapError .errorType
-                                >> Expect.equal (Err ParseError.EmptyParentheses)
+                                >> Expect.equal (Err ParserError.EmptyParentheses)
                             ]
             ]
         ]

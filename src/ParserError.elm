@@ -1,11 +1,11 @@
-module ParseError exposing (ErrorType(..), ParseError, ParseFunction(..), Side(..))
+module ParserError exposing (ErrorType(..), ParseFunction(..), ParserError, Side(..))
 
 {-| Definition of errors created when passing state
 
 
 # Definition
 
-@docs ParseError ErrorType ParseFunction Side
+@docs ParserError ErrorType ParseFunction Side
 
 -}
 
@@ -18,7 +18,7 @@ module ParseError exposing (ErrorType(..), ParseError, ParseFunction(..), Side(.
     like "error found in the left hand side of the binary '\*' operator: ..."
 
 -}
-type alias ParseError =
+type alias ParserError =
     { position : Int
     , errorType : ErrorType
     , parseStack : List ParseFunction
