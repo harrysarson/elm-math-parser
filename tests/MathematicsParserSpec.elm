@@ -5,6 +5,7 @@ import Expression exposing (Expression)
 import Fuzz
 import MaFuzz
 import MathematicsParser exposing (expression)
+import ParseError
 import String
 import Test exposing (describe, fuzz, fuzz2, fuzz3, test)
 
@@ -140,6 +141,17 @@ tests =
             , makePrecedenceTest "( + str ) - 19"
             , makePrecedenceTest "( 8 * ( - 2 ) ) - ( STR / 7 )"
             , makePrecedenceTest "2 - ( 4 / ( - 8 ) )"
+            ]
+        , describe "Errors"
+            [ test "Empty parentheses" <|
+                \() ->
+                    MathematicsParser.expression "a * () + 3"
+                        |> Expect.all
+                            [ Result.mapError .position
+                                >> Expect.equal (Err 5)
+                            , Result.mapError .errorType
+                                >> Expect.equal (Err ParseError.EmptyParentheses)
+                            ]
             ]
         ]
 
