@@ -3,7 +3,7 @@ module MaFuzz exposing (addSpaces, binaryOperator, parseState, spaces, symbol, u
 import Char
 import Expression
 import Fuzz
-import ParseState exposing (ParseState)
+import ParserState exposing (ParserState)
 import Random exposing (Generator)
 import Random.Extra
 import Set
@@ -74,7 +74,7 @@ addSpaces fuzz =
         |> Fuzz.map2 String.append spaces
 
 
-parseState : Fuzz.Fuzzer ParseState
+parseState : Fuzz.Fuzzer ParserState
 parseState =
     let
         sourceCharFuzz =

@@ -5,12 +5,12 @@ import Expression exposing (Expression)
 import MaDebug
 import ParseError exposing (ParseError)
 import ParseResult exposing (ParseResult)
-import ParseState exposing (ParseState)
+import ParserState exposing (ParserState)
 import Set
 
 
 type alias StateParser =
-    ParseState -> Result ParseError ParseResult
+    ParserState -> Result ParseError ParseResult
 
 
 {-| Parse an expression.
@@ -18,7 +18,7 @@ type alias StateParser =
 expression : StateParser
 expression =
     MaDebug.log "Expression"
-        >> ParseState.trimState
+        >> ParserState.trimState
         >> List.foldr
             (\opChars nextParser -> binaryOperators opChars nextParser)
             (unaryOperators (Expression.unaryOperators |> Set.toList) (parenthesis symbol))
@@ -50,7 +50,7 @@ unaryOperators opChars nextParser =
                                 { source = rhs
                                 , start = start + 1
                                 }
-                                    |> ParseState.trimState
+                                    |> ParserState.trimState
                                     |> nextParser
                                     |> Result.mapError
                                         (\({ parseStack } as parseError) ->
@@ -166,12 +166,12 @@ binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state
                 |> String.join ", "
                 |> String.append ("BinaryOperators (skipping " ++ String.fromInt numToSkip ++ ") ")
     in
-    case ParseState.splitStateSkipping numToSkip opChars (MaDebug.log label state) of
+    case ParserState.splitStateSkipping numToSkip opChars (MaDebug.log label state) of
         Just ( lhs, op, rhsAndMore ) ->
             let
                 parsedLhsResult =
                     lhs
-                        |> ParseState.trimState
+                        |> ParserState.trimState
                         |> nextParser
                         |> Result.mapError
                             (\({ parseStack } as parseError) ->
@@ -180,7 +180,7 @@ binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state
             in
             case parsedLhsResult of
                 Ok parsedLhs ->
-                    binaryOpRhsHelper 0 opChars nextParser parsedLhs op (ParseState.trimState rhsAndMore)
+                    binaryOpRhsHelper 0 opChars nextParser parsedLhs op (ParserState.trimState rhsAndMore)
 
                 Err parseError ->
                     case parseError.errorType of
@@ -196,12 +196,12 @@ binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state
 
 binaryOpRhsHelper : Int -> List Char -> StateParser -> ParseResult -> Char -> StateParser
 binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
-    case ParseState.splitStateSkipping numToSkip opChars rhsAndMore of
+    case ParserState.splitStateSkipping numToSkip opChars rhsAndMore of
         Just ( nextRhs, nextOp, moreRhs ) ->
             let
                 parsedRhs =
                     nextRhs
-                        |> ParseState.trimState
+                        |> ParserState.trimState
                         |> nextParser
                         |> Result.mapError
                             (\({ parseStack } as parseError) ->
@@ -230,7 +230,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
 
         Nothing ->
             rhsAndMore
-                |> ParseState.trimState
+                |> ParserState.trimState
                 |> nextParser
                 |> Result.mapError
                     (\({ parseStack } as parseError) ->
@@ -246,7 +246,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                     )
 
 
-symbolHelper : ParseState -> Maybe ParseError
+symbolHelper : ParserState -> Maybe ParseError
 symbolHelper ({ source, start } as state) =
     String.uncons source
         |> Maybe.andThen

@@ -1,5 +1,5 @@
-module ParseState exposing
-    ( ParseState
+module ParserState exposing
+    ( ParserState
     , splitStateSkipping, trimState
     )
 
@@ -8,7 +8,7 @@ module ParseState exposing
 
 # Definition
 
-@docs ParseState
+@docs ParserState
 
 
 # Functions
@@ -24,7 +24,7 @@ module ParseState exposing
   - `start`: position of source in the original string input.
 
 -}
-type alias ParseState =
+type alias ParserState =
     { source : String
     , start : Int
     }
@@ -43,7 +43,7 @@ The first `n` occurrences are ignored.
 source of the state.
 
 -}
-splitStateSkipping : Int -> List Char -> ParseState -> Maybe ( ParseState, Char, ParseState )
+splitStateSkipping : Int -> List Char -> ParserState -> Maybe ( ParserState, Char, ParserState )
 splitStateSkipping n chars ({ start, source } as state) =
     findNthOneOfHelper n chars 0 "" state.source 0
         |> Maybe.map
@@ -64,7 +64,7 @@ splitStateSkipping n chars ({ start, source } as state) =
 Should always trim in the same way as `String.trim` and will update `start` with the number of characters trimmed.
 
 -}
-trimState : ParseState -> ParseState
+trimState : ParserState -> ParserState
 trimState =
     trimStart >> trimEnd
 
@@ -133,7 +133,7 @@ findNthOneOfHelper n chars closesRequired previousReversed source index =
             )
 
 
-trimStart : ParseState -> ParseState
+trimStart : ParserState -> ParserState
 trimStart ({ source, start } as state) =
     case String.uncons source of
         Nothing ->
@@ -167,7 +167,7 @@ trimStart ({ source, start } as state) =
             state
 
 
-trimEnd : ParseState -> ParseState
+trimEnd : ParserState -> ParserState
 trimEnd ({ source, start } as state) =
     { state
         | source = String.trimRight source

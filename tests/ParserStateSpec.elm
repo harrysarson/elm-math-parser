@@ -1,10 +1,10 @@
-module ParseStateSpec exposing (tests)
+module ParserStateSpec exposing (tests)
 
 import Char
 import Expect
 import Fuzz
 import MaFuzz
-import ParseState exposing (..)
+import ParserState exposing (..)
 import String
 import Test exposing (describe, fuzz, fuzz2, test)
 
