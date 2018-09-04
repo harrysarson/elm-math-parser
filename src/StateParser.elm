@@ -37,8 +37,12 @@ binaryOperators opChars nextParser =
 unaryOperators : List Char -> StateParser -> StateParser
 unaryOperators opChars nextParser =
     checkEmptyState
-        (\({ source, start } as state) ->
-            case String.uncons (MaDebug.log "UnaryOperator" source) of
+        (\state ->
+            let
+                { source, start } =
+                    MaDebug.log "UnaryOperator" state
+            in
+            case String.uncons source of
                 Just ( op, rhs ) ->
                     if List.any (\c -> c == op) opChars then
                         let
@@ -70,8 +74,12 @@ unaryOperators opChars nextParser =
 parenthesis : StateParser -> StateParser
 parenthesis nextParser =
     checkEmptyState
-        (\({ source, start } as state) ->
-            case String.uncons (MaDebug.log "Parentheses" source) of
+        (\state ->
+            let
+                { source, start } =
+                    MaDebug.log "UnaryOperator" state
+            in
+            case String.uncons source of
                 Just ( possiblyOpenParenthesis, rest ) ->
                     if possiblyOpenParenthesis == '(' then
                         if String.endsWith ")" rest then
@@ -82,6 +90,18 @@ parenthesis nextParser =
                                         , start = start + 1
                                         }
                                             |> expression
+                                            |> Result.mapError
+                                                (\parseError ->
+                                                    case parseError.errorType of
+                                                        ParseError.EmptyString ->
+                                                            { position = start + 1
+                                                            , errorType = ParseError.EmptyParentheses
+                                                            , parseStack = []
+                                                            }
+
+                                                        _ ->
+                                                            parseError
+                                                )
                                             |> Result.mapError
                                                 (\({ parseStack } as parseError) ->
                                                     { parseError | parseStack = ParseError.Parentheses :: parseStack }
@@ -144,7 +164,7 @@ binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state
             opChars
                 |> List.map String.fromChar
                 |> String.join ", "
-                |> String.append "BinaryOperators "
+                |> String.append ("BinaryOperators (skipping " ++ String.fromInt numToSkip ++ ") ")
     in
     case ParseState.splitStateSkipping numToSkip opChars (MaDebug.log label state) of
         Just ( lhs, op, rhsAndMore ) ->

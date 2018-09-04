@@ -31,6 +31,7 @@ binary operator.
 -}
 type ErrorType
     = EmptyString
+    | EmptyParentheses
     | InvalidChar Char
     | MissingClosingParenthesis
 
