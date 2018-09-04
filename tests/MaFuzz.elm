@@ -1,8 +1,8 @@
 module MaFuzz exposing (addSpaces, binaryOperator, parseState, spaces, symbol, unaryOperator)
 
 import Char
-import Expression
 import Fuzz
+import MathExpression
 import ParserState exposing (ParserState)
 import Random exposing (Generator)
 import Random.Extra
@@ -47,7 +47,7 @@ symbol =
 
 binaryOperator : Fuzz.Fuzzer Char
 binaryOperator =
-    Expression.binaryOperators
+    MathExpression.binaryOperators
         |> List.map (Set.toList >> List.map Fuzz.constant)
         |> List.map Fuzz.oneOf
         |> Fuzz.oneOf
@@ -55,7 +55,7 @@ binaryOperator =
 
 unaryOperator : Fuzz.Fuzzer Char
 unaryOperator =
-    Expression.unaryOperators
+    MathExpression.unaryOperators
         |> Set.toList
         |> List.map Fuzz.constant
         |> Fuzz.oneOf

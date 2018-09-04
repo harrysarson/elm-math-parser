@@ -1,5 +1,5 @@
-module Expression exposing
-    ( Expression(..)
+module MathExpression exposing
+    ( MathExpression(..)
     , binaryOperators, unaryOperators
     , stringify
     )
@@ -9,7 +9,7 @@ module Expression exposing
 
 # Types
 
-@docs Expression
+@docs MathExpression
 
 
 # Definitions
@@ -42,14 +42,14 @@ unaryOperators =
 
 {-| A mathematical expression.
 -}
-type Expression
-    = BinaryOperator Expression Char Expression
-    | UnaryOperator Char Expression
-    | Parentheses Expression
+type MathExpression
+    = BinaryOperator MathExpression Char MathExpression
+    | UnaryOperator Char MathExpression
+    | Parentheses MathExpression
     | Symbol String
 
 
-stringifyWithParentheses : Expression -> String
+stringifyWithParentheses : MathExpression -> String
 stringifyWithParentheses expression =
     case expression of
         Symbol _ ->
@@ -59,7 +59,7 @@ stringifyWithParentheses expression =
             "( " ++ stringify expression ++ " )"
 
 
-stringify : Expression -> String
+stringify : MathExpression -> String
 stringify expression =
     case expression of
         BinaryOperator lhs op rhs ->

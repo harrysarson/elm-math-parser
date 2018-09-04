@@ -1,8 +1,8 @@
 module StateParser exposing (StateParser, expression)
 
 import Char
-import Expression exposing (Expression)
 import MaDebug
+import MathExpression exposing (MathExpression)
 import ParseResult exposing (ParseResult)
 import ParserError exposing (ParserError)
 import ParserState exposing (ParserState)
@@ -17,15 +17,15 @@ type alias StateParser =
 -}
 expression : StateParser
 expression =
-    MaDebug.log "Expression"
+    MaDebug.log "MathExpression"
         >> ParserState.trimState
         >> List.foldr
             (\opChars nextParser -> binaryOperators opChars nextParser)
-            (unaryOperators (Expression.unaryOperators |> Set.toList) (parenthesis symbol))
-            (Expression.binaryOperators |> List.map Set.toList)
+            (unaryOperators (MathExpression.unaryOperators |> Set.toList) (parenthesis symbol))
+            (MathExpression.binaryOperators |> List.map Set.toList)
         >> Result.mapError
             (\({ parseStack } as parseError) ->
-                { parseError | parseStack = ParserError.Expression :: parseStack }
+                { parseError | parseStack = ParserError.MathExpression :: parseStack }
             )
 
 
@@ -59,7 +59,7 @@ unaryOperators opChars nextParser =
                         in
                         Result.map
                             (\parseResult ->
-                                { parseResult | expression = Expression.UnaryOperator op parseResult.expression }
+                                { parseResult | expression = MathExpression.UnaryOperator op parseResult.expression }
                             )
                             parsedRhs
 
@@ -130,7 +130,7 @@ symbol =
             case symbolHelper (MaDebug.log "Symbol" state) of
                 Nothing ->
                     Ok <|
-                        { expression = Expression.Symbol source
+                        { expression = MathExpression.Symbol source
                         , symbols = [ ( source, start ) ]
                         }
 
@@ -214,7 +214,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                         0
                         opChars
                         nextParser
-                        { expression = Expression.BinaryOperator lhs.expression op rhs.expression
+                        { expression = MathExpression.BinaryOperator lhs.expression op rhs.expression
                         , symbols = lhs.symbols ++ rhs.symbols
                         }
                         nextOp
@@ -240,7 +240,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                     )
                 |> Result.map
                     (\rhs ->
-                        { expression = Expression.BinaryOperator lhs.expression op rhs.expression
+                        { expression = MathExpression.BinaryOperator lhs.expression op rhs.expression
                         , symbols = lhs.symbols ++ rhs.symbols
                         }
                     )

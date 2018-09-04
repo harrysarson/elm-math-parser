@@ -43,7 +43,7 @@ type ParseFunction
     | BinaryOperator Char Side
     | UnaryOperator Char
     | Parentheses
-    | Expression
+    | MathExpression
 
 
 {-| Side of a binary operator being parsed when an error was encountered.

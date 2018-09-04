@@ -2,11 +2,11 @@ module Demo exposing (main)
 
 import Browser
 import Browser.Dom as Dom
-import Expression exposing (stringify)
 import Html exposing (Attribute, Html, div, input, li, ol, span, table, td, text, tr)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
-import MathematicsParser exposing (expression)
+import MathExpression exposing (stringify)
+import MathParser exposing (expression)
 import Task
 
 

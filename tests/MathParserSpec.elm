@@ -1,10 +1,10 @@
-module MathematicsParserSpec exposing (tests)
+module MathParserSpec exposing (tests)
 
 import Expect
-import Expression exposing (Expression)
 import Fuzz
 import MaFuzz
-import MathematicsParser exposing (expression)
+import MathExpression exposing (MathExpression)
+import MathParser exposing (expression)
 import ParserError
 import String
 import Test exposing (describe, fuzz, fuzz2, fuzz3, test)
@@ -33,10 +33,10 @@ tests =
                     parseResult =
                         Ok <|
                             { expression =
-                                Expression.BinaryOperator
-                                    (Expression.Symbol trimmedLhs)
+                                MathExpression.BinaryOperator
+                                    (MathExpression.Symbol trimmedLhs)
                                     op
-                                    (Expression.Symbol trimmedRhs)
+                                    (MathExpression.Symbol trimmedRhs)
                             , symbols =
                                 [ ( trimmedLhs, lhs, 0 )
                                 , ( trimmedRhs, rhs, String.length lhs + 1 )
@@ -79,14 +79,14 @@ tests =
                 let
                     expectedAst =
                         Ok <|
-                            Expression.BinaryOperator
-                                (Expression.BinaryOperator
-                                    (Expression.Symbol (String.trim a))
+                            MathExpression.BinaryOperator
+                                (MathExpression.BinaryOperator
+                                    (MathExpression.Symbol (String.trim a))
                                     op
-                                    (Expression.Symbol (String.trim b))
+                                    (MathExpression.Symbol (String.trim b))
                                 )
                                 op
-                                (Expression.Symbol (String.trim c))
+                                (MathExpression.Symbol (String.trim c))
                 in
                 a
                     ++ String.fromChar op
@@ -114,12 +114,12 @@ tests =
                 let
                     expectedAst =
                         Ok <|
-                            Expression.BinaryOperator
-                                (Expression.Symbol (String.trim a))
+                            MathExpression.BinaryOperator
+                                (MathExpression.Symbol (String.trim a))
                                 binaryOp
-                                (Expression.UnaryOperator
+                                (MathExpression.UnaryOperator
                                     unaryOp
-                                    (Expression.Symbol (String.trim b))
+                                    (MathExpression.Symbol (String.trim b))
                                 )
                 in
                 a
@@ -145,7 +145,7 @@ tests =
         , describe "Errors"
             [ test "Empty parentheses" <|
                 \() ->
-                    MathematicsParser.expression "a * () + 3"
+                    MathParser.expression "a * () + 3"
                         |> Expect.all
                             [ Result.mapError .position
                                 >> Expect.equal (Err 5)
@@ -173,5 +173,5 @@ makePrecedenceTest withParenthesis =
             withoutParenthesis
                 |> expression
                 |> Result.map .expression
-                |> Result.map Expression.stringify
+                |> Result.map MathExpression.stringify
                 |> Expect.equal (Ok withParenthesis)
