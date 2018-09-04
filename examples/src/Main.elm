@@ -1,12 +1,13 @@
 module Demo exposing (main)
 
-import Html exposing (Html, Attribute, program, text, div, input, ol, li, table, tr, td, span)
+import Browser
+import Browser.Dom as Dom
+import Expression exposing (stringify)
+import Html exposing (Attribute, Html, div, input, li, ol, span, table, td, text, tr)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
-import Dom
-import Task
 import MathematicsParser exposing (expression)
-import Expression exposing (stringify)
+import Task
 
 
 initialModel : String
@@ -14,10 +15,10 @@ initialModel =
     "4 + 8"
 
 
-main : Program Never String Msg
+main : Program () String Msg
 main =
-    program
-        { init = ( initialModel, Task.attempt (always FocusResult) (Dom.focus "expression-input") )
+    Browser.document
+        { init = \_ -> ( initialModel, Task.attempt (always FocusResult) (Dom.focus "expression-input") )
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.none
@@ -57,7 +58,7 @@ flipResult result =
             Err val
 
 
-view : String -> Html Msg
+view : String -> Browser.Document Msg
 view content =
     let
         parsed =
@@ -67,8 +68,8 @@ view content =
             content
                 |> String.toList
                 |> List.indexedMap always
-                |> List.map (\i -> i % 10)
-                |> List.map toString
+                |> List.map (\i -> modBy 10 i)
+                |> List.map String.fromInt
                 |> String.join ""
 
         error =
@@ -90,22 +91,25 @@ view content =
                             |> String.padRight (String.length content) ' '
                     )
     in
-        div [ myStyle ]
+    { title = "Elm Mathematics Parsing"
+    , body =
+        [ div myStyle
             ([ Just <|
                 input
-                    [ defaultValue initialModel
-                    , id "expression-input"
-                    , onInput NewContent
-                    , inputStyle
-                    ]
+                    ([ value content
+                     , id "expression-input"
+                     , onInput NewContent
+                     ]
+                        ++ inputStyle
+                    )
                     []
              , errPointer
                 |> Maybe.map
                     (\pointer ->
                         input
-                            [ value pointer
-                            , inputStyle
-                            ]
+                            ([ value pointer ]
+                                ++ inputStyle
+                            )
                             []
                     )
              , error
@@ -116,15 +120,15 @@ view content =
                 |> Maybe.map .parseStack
                 |> Maybe.map
                     (\stack ->
-                        ol [] <| List.map (\fun -> li [] [ text <| toString fun ]) stack
+                        ol [] <| List.map (\fun -> li [] [ text <| Debug.toString fun ]) stack
                     )
              , error
                 |> Maybe.map .errorType
                 |> Maybe.map
                     (\type_ ->
-                        div [] [ text <| "type: " ++ toString type_ ]
+                        div [] [ text <| "type: " ++ Debug.toString type_ ]
                     )
-             , Just <| div [] [ text (toString parsed) ]
+             , Just <| div [] [ text (Debug.toString parsed) ]
              , parsed
                 |> Result.map (\p -> div [] [ text (stringify p.expression) ])
                 |> Result.toMaybe
@@ -133,16 +137,15 @@ view content =
                 |> Result.map
                     (\symbols ->
                         table
-                            [ style [ ( "border-collapse", "collapse" ), ( "text-align", "center" ) ] ]
-                            ((tr [ style [ ( "border-bottom", "1px solid black" ) ] ]
+                            [ style "border-collapse" "collapse", style "text-align" "center" ]
+                            (tr [ style "border-bottom" "1px solid black" ]
                                 [ td [] [ text "Symbol" ]
                                 , td [] [ text "Index" ]
                                 ]
-                             )
                                 :: (symbols
                                         |> List.map
                                             (\( symbol, index ) ->
-                                                tr [] [ td [] [ text symbol ], td [] [ text <| toString index ] ]
+                                                tr [] [ td [] [ text symbol ], td [] [ text <| Debug.toString index ] ]
                                             )
                                    )
                             )
@@ -151,6 +154,8 @@ view content =
              ]
                 |> justList
             )
+        ]
+    }
 
 
 justList : List (Maybe a) -> List a
@@ -168,23 +173,21 @@ justList list =
                     justList rest
 
 
-myStyle : Attribute msg
+myStyle : List (Attribute msg)
 myStyle =
-    style
-        [ ( "padding", "1em 1em" )
-        , ( "font-size", "2em" )
-        , ( "font-family", "monospace, monospace" )
-        ]
+    [ style "padding" "1em 1em"
+    , style "font-size" "2em"
+    , style "font-family" "monospace, monospace"
+    ]
 
 
-inputStyle : Attribute msg
+inputStyle : List (Attribute msg)
 inputStyle =
-    style
-        [ ( "width", "100%" )
-        , ( "font", "inherit" )
-        ]
+    [ style "width" "100%"
+    , style "font" "inherit"
+    ]
 
 
-tableStyle : Attribute msg
+tableStyle : List (Attribute msg)
 tableStyle =
-    style [ ( "border-collapse", "collapse" ) ]
+    [ style "border-collapse" "collapse" ]

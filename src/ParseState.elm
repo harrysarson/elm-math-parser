@@ -1,4 +1,7 @@
-module ParseState exposing (ParseState, splitStateSkipping, trimState)
+module ParseState exposing
+    ( ParseState
+    , splitStateSkipping, trimState
+    )
 
 {-| Definition of state used for parsing and functions to manipulate this state.
 
@@ -44,7 +47,7 @@ splitStateSkipping : Int -> List Char -> ParseState -> Maybe ( ParseState, Char,
 splitStateSkipping n chars ({ start, source } as state) =
     findNthOneOfHelper n chars 0 "" state.source 0
         |> Maybe.map
-            (\( left, splitChar, right, leftSize ) ->
+            (\{ left, splitChar, right, leftSize } ->
                 ( { source = left
                   , start = start
                   }
@@ -73,6 +76,7 @@ findClosingParenthesis previousReversed source index =
             (\( possiblyCloseParenthesis, rest ) ->
                 if possiblyCloseParenthesis == ')' then
                     Just ( String.reverse previousReversed, index )
+
                 else
                     findClosingParenthesis (String.cons possiblyCloseParenthesis previousReversed) rest (index + 1)
             )
@@ -80,9 +84,18 @@ findClosingParenthesis previousReversed source index =
 
 
 -- todo: missing open or closing parenthesis
+-- todo: rename type and function
 
 
-findNthOneOfHelper : Int -> List Char -> Int -> String -> String -> Int -> Maybe ( String, Char, String, Int )
+type alias FindResult =
+    { left : String
+    , splitChar : Char
+    , right : String
+    , leftSize : Int
+    }
+
+
+findNthOneOfHelper : Int -> List Char -> Int -> String -> String -> Int -> Maybe FindResult
 findNthOneOfHelper n chars closesRequired previousReversed source index =
     String.uncons source
         |> Maybe.andThen
@@ -91,11 +104,19 @@ findNthOneOfHelper n chars closesRequired previousReversed source index =
                     0 ->
                         if first == '(' then
                             findNthOneOfHelper n chars 1 (String.cons first previousReversed) rest (index + 1)
+
                         else if List.any (\c -> c == first) chars then
                             if n == 0 then
-                                Just ( String.reverse previousReversed, first, rest, index )
+                                Just
+                                    { left = String.reverse previousReversed
+                                    , splitChar = first
+                                    , right = rest
+                                    , leftSize = index
+                                    }
+
                             else
                                 findNthOneOfHelper (n - 1) chars 0 (String.cons first previousReversed) rest (index + 1)
+
                         else
                             findNthOneOfHelper n chars 0 (String.cons first previousReversed) rest (index + 1)
 
@@ -114,32 +135,36 @@ findNthOneOfHelper n chars closesRequired previousReversed source index =
 
 trimStart : ParseState -> ParseState
 trimStart ({ source, start } as state) =
-    let
-        withoutFirstChar source =
+    case String.uncons source of
+        Nothing ->
+            state
+
+        Just ( ' ', rest ) ->
             trimStart
-                { state
-                    | source = source
-                    , start = start + 1
+                { source = rest
+                , start = start + 1
                 }
-    in
-        case String.uncons source of
-            Nothing ->
-                state
 
-            Just ( ' ', rest ) ->
-                withoutFirstChar rest
+        Just ( '\n', rest ) ->
+            trimStart
+                { source = rest
+                , start = start + 1
+                }
 
-            Just ( '\n', rest ) ->
-                withoutFirstChar rest
+        Just ( '\u{000D}', rest ) ->
+            trimStart
+                { source = rest
+                , start = start + 1
+                }
 
-            Just ( '\x0D', rest ) ->
-                withoutFirstChar rest
+        Just ( '\t', rest ) ->
+            trimStart
+                { source = rest
+                , start = start + 1
+                }
 
-            Just ( '\t', rest ) ->
-                withoutFirstChar rest
-
-            Just ( first, rest ) ->
-                state
+        Just ( first, rest ) ->
+            state
 
 
 trimEnd : ParseState -> ParseState

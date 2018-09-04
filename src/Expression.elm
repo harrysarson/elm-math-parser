@@ -1,4 +1,8 @@
-module Expression exposing (..)
+module Expression exposing
+    ( Expression(..)
+    , binaryOperators, unaryOperators
+    , stringify
+    )
 
 {-| This library contains types needed to represent simple mathematical expressions.
 
@@ -6,6 +10,16 @@ module Expression exposing (..)
 # Types
 
 @docs Expression
+
+
+# Definitions
+
+@docs binaryOperators, unaryOperators
+
+
+# Output
+
+@docs stringify
 
 -}
 
@@ -35,26 +49,27 @@ type Expression
     | Symbol String
 
 
+stringifyWithParentheses : Expression -> String
+stringifyWithParentheses expression =
+    case expression of
+        Symbol _ ->
+            stringify expression
+
+        _ ->
+            "( " ++ stringify expression ++ " )"
+
+
 stringify : Expression -> String
 stringify expression =
-    let
-        stringifyWithParentheses expression =
-            case expression of
-                Symbol _ ->
-                    stringify expression
+    case expression of
+        BinaryOperator lhs op rhs ->
+            stringifyWithParentheses lhs ++ " " ++ String.fromChar op ++ " " ++ stringifyWithParentheses rhs
 
-                _ ->
-                    "( " ++ stringify expression ++ " )"
-    in
-        case expression of
-            BinaryOperator lhs op rhs ->
-                stringifyWithParentheses lhs ++ " " ++ String.fromChar op ++ " " ++ stringifyWithParentheses rhs
+        UnaryOperator op expr ->
+            String.fromChar op ++ " " ++ stringifyWithParentheses expr
 
-            UnaryOperator op expr ->
-                String.fromChar op ++ " " ++ stringifyWithParentheses expr
+        Parentheses expr ->
+            stringifyWithParentheses expr
 
-            Parentheses expr ->
-                stringifyWithParentheses expr
-
-            Symbol str ->
-                str
+        Symbol str ->
+            str

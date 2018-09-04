@@ -1,12 +1,12 @@
 module MathematicsParserSpec exposing (tests)
 
-import String
-import Expression exposing (Expression)
-import MathematicsParser exposing (expression)
-import Test exposing (test, describe, fuzz)
-import Fuzz
 import Expect
+import Expression exposing (Expression)
+import Fuzz
 import MaFuzz
+import MathematicsParser exposing (expression)
+import String
+import Test exposing (describe, fuzz, fuzz2, fuzz3, test)
 
 
 tests : Test.Test
@@ -52,25 +52,29 @@ tests =
                                                     index + add
 
                                                 Nothing ->
-                                                    Debug.crash <| "trimmed string " ++ toString trimmed ++ " surely must be contained within untrimmed string " ++ toString untrimmed
+                                                    Debug.todo <|
+                                                        "trimmed string "
+                                                            ++ Debug.toString trimmed
+                                                            ++ " surely must be contained within untrimmed string "
+                                                            ++ Debug.toString untrimmed
                                             )
                                         )
                             }
                 in
-                    (lhs ++ String.fromChar op ++ rhs)
-                        |> expression
-                        |> Expect.equal parseResult
-        , fuzz
-            (Fuzz.tuple4
-                ( MaFuzz.binaryOperator
-                , MaFuzz.addSpaces MaFuzz.symbol
+                (lhs ++ String.fromChar op ++ rhs)
+                    |> expression
+                    |> Expect.equal parseResult
+        , fuzz2
+            MaFuzz.binaryOperator
+            (Fuzz.tuple3
+                ( MaFuzz.addSpaces MaFuzz.symbol
                 , MaFuzz.addSpaces MaFuzz.symbol
                 , MaFuzz.addSpaces MaFuzz.symbol
                 )
             )
             "Parse binary operators with left associativity"
           <|
-            \( op, a, b, c ) ->
+            \op ( a, b, c ) ->
                 let
                     expectedAst =
                         Ok <|
@@ -83,26 +87,29 @@ tests =
                                 op
                                 (Expression.Symbol (String.trim c))
                 in
-                    a
-                        ++ String.fromChar op
-                        ++ b
-                        ++ String.fromChar op
-                        ++ c
-                        |> expression
-                        |> Result.map .expression
-                        |> Expect.equal expectedAst
-        , fuzz
-            (Fuzz.tuple5
+                a
+                    ++ String.fromChar op
+                    ++ b
+                    ++ String.fromChar op
+                    ++ c
+                    |> expression
+                    |> Result.map .expression
+                    |> Expect.equal expectedAst
+        , fuzz3
+            (Fuzz.tuple
                 ( MaFuzz.addSpaces MaFuzz.symbol
                 , MaFuzz.binaryOperator
-                , MaFuzz.spaces
-                , MaFuzz.unaryOperator
+                )
+            )
+            MaFuzz.spaces
+            (Fuzz.tuple
+                ( MaFuzz.unaryOperator
                 , MaFuzz.addSpaces MaFuzz.symbol
                 )
             )
             "Parse unary operators with higher precedence than binary operators"
           <|
-            \( a, binaryOp, spaces, unaryOp, b ) ->
+            \( a, binaryOp ) spaces ( unaryOp, b ) ->
                 let
                     expectedAst =
                         Ok <|
@@ -114,14 +121,14 @@ tests =
                                     (Expression.Symbol (String.trim b))
                                 )
                 in
-                    a
-                        ++ String.fromChar binaryOp
-                        ++ spaces
-                        ++ String.fromChar unaryOp
-                        ++ b
-                        |> expression
-                        |> Result.map .expression
-                        |> Expect.equal expectedAst
+                a
+                    ++ String.fromChar binaryOp
+                    ++ spaces
+                    ++ String.fromChar unaryOp
+                    ++ b
+                    |> expression
+                    |> Result.map .expression
+                    |> Expect.equal expectedAst
         , describe "Operator precedence"
             [ makePrecedenceTest "7 + 8"
             , makePrecedenceTest "( aA0 - bB1 ) + cC2"
@@ -147,12 +154,12 @@ makePrecedenceTest withParenthesis =
                 |> String.split " )"
                 |> String.join ""
     in
-        test
-            (withoutParenthesis ++ " == " ++ withParenthesis)
-        <|
-            \() ->
-                withoutParenthesis
-                    |> expression
-                    |> Result.map .expression
-                    |> Result.map Expression.stringify
-                    |> Expect.equal (Ok withParenthesis)
+    test
+        (withoutParenthesis ++ " == " ++ withParenthesis)
+    <|
+        \() ->
+            withoutParenthesis
+                |> expression
+                |> Result.map .expression
+                |> Result.map Expression.stringify
+                |> Expect.equal (Ok withParenthesis)

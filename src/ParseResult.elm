@@ -1,8 +1,8 @@
-module ParseResult exposing (..)
+module ParseResult exposing (ParseResult)
 
 import Dict exposing (Dict)
-import Set exposing (Set)
 import Expression exposing (Expression)
+import Set exposing (Set)
 
 
 type alias ParseResult =

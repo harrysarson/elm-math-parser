@@ -1,4 +1,7 @@
-module MathematicsParser exposing (MathematicsParser, expression)
+module MathematicsParser exposing
+    ( expression
+    , MathematicsParser
+    )
 
 {-| This library allows simple mathematical expressions to be parsed in elm.
 A string expression is converted into an abstract syntax tree.
@@ -12,12 +15,12 @@ A string expression is converted into an abstract syntax tree.
 -}
 
 import Char
-import Set
 import Expression exposing (Expression)
-import ParseResult exposing (ParseResult)
-import ParseError exposing (ParseError)
-import StateParser
 import MaDebug
+import ParseError exposing (ParseError)
+import ParseResult exposing (ParseResult)
+import Set
+import StateParser
 
 
 {-| A parser that converts a string into a mathematical expression.

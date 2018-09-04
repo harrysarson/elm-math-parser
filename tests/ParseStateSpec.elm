@@ -1,12 +1,12 @@
 module ParseStateSpec exposing (tests)
 
-import String
 import Char
-import ParseState exposing (..)
-import Test exposing (test, describe, fuzz)
-import Fuzz
 import Expect
+import Fuzz
 import MaFuzz
+import ParseState exposing (..)
+import String
+import Test exposing (describe, fuzz, fuzz2, test)
 
 
 tests : Test.Test
@@ -71,26 +71,26 @@ tests =
                                   }
                                 )
                             )
-            , fuzz (Fuzz.tuple ( fuzzNonParenthesisChar, MaFuzz.parseState )) "splitting on first character" <|
-                \( firstChar, { source, start } as state ) ->
+            , fuzz2 fuzzNonParenthesisChar MaFuzz.parseState "splitting on first character" <|
+                \firstChar ({ source, start } as state) ->
                     let
                         listOfAscii =
                             List.range 0 255
                                 |> List.map Char.fromCode
                     in
-                        { state | source = String.cons firstChar source }
-                            |> splitStateSkipping 0 listOfAscii
-                            |> Expect.equal
-                                (Just
-                                    ( { source = ""
-                                      , start = start
-                                      }
-                                    , firstChar
-                                    , { source = source
-                                      , start = start + 1
-                                      }
-                                    )
+                    { state | source = String.cons firstChar source }
+                        |> splitStateSkipping 0 listOfAscii
+                        |> Expect.equal
+                            (Just
+                                ( { source = ""
+                                  , start = start
+                                  }
+                                , firstChar
+                                , { source = source
+                                  , start = start + 1
+                                  }
                                 )
+                            )
             , fuzz Fuzz.int "respects parentheses" <|
                 \start ->
                     { source = "The (quick brown fox jumps) over the lazy dog."
@@ -181,8 +181,20 @@ tests =
 fuzzNonParenthesisChar : Fuzz.Fuzzer Char
 fuzzNonParenthesisChar =
     Fuzz.char
-        |> Fuzz.conditional
-            { retries = 10
-            , fallback = Char.fromCode << (-) 1 << Char.toCode
-            , condition = (\c -> c /= '(')
-            }
+        |> Fuzz.map
+            (\c ->
+                if c == '(' then
+                    ' '
+
+                else
+                    c
+            )
+
+
+
+{- |> Fuzz.conditional
+   { retries = 10
+   , fallback = Char.fromCode << (-) 1 << Char.toCode
+   , condition = (\c -> c /= '(')
+   }
+-}

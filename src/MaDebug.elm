@@ -18,5 +18,6 @@ log : String -> a -> a
 log =
     if enableLogging then
         Debug.log
+
     else
         always identity
