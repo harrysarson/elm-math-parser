@@ -40,8 +40,8 @@ expression =
             (unaryOperators unaryOperatorsDict (parenthesis symbol))
             binaryOperatorsDict
         >> Result.mapError
-            (\({ parseStack } as parseError) ->
-                { parseError | parseStack = ParserError.MathExpression :: parseStack }
+            (\({ parseStack } as parserError) ->
+                { parserError | parseStack = ParserError.MathExpression :: parseStack }
             )
 
 
@@ -77,8 +77,8 @@ unaryOperators opCharsDict nextParser =
                                         |> ParserState.trimState
                                         |> nextParser
                                         |> Result.mapError
-                                            (\parseError ->
-                                                case parseError.errorType of
+                                            (\parserError ->
+                                                case parserError.errorType of
                                                     ParserError.EmptyString ->
                                                         { position = start
                                                         , errorType = ParserError.MissingUnaryOperand
@@ -86,11 +86,11 @@ unaryOperators opCharsDict nextParser =
                                                         }
 
                                                     _ ->
-                                                        parseError
+                                                        parserError
                                             )
                                         |> Result.mapError
-                                            (\({ parseStack } as parseError) ->
-                                                { parseError | parseStack = ParserError.UnaryOperator op :: parseStack }
+                                            (\({ parseStack } as parserError) ->
+                                                { parserError | parseStack = ParserError.UnaryOperator op :: parseStack }
                                             )
                             in
                             Result.map
@@ -127,8 +127,8 @@ parenthesis nextParser =
                                         }
                                             |> expression
                                             |> Result.mapError
-                                                (\parseError ->
-                                                    case parseError.errorType of
+                                                (\parserError ->
+                                                    case parserError.errorType of
                                                         ParserError.EmptyString ->
                                                             { position = start + 1
                                                             , errorType = ParserError.EmptyParentheses
@@ -136,11 +136,11 @@ parenthesis nextParser =
                                                             }
 
                                                         _ ->
-                                                            parseError
+                                                            parserError
                                                 )
                                             |> Result.mapError
-                                                (\({ parseStack } as parseError) ->
-                                                    { parseError | parseStack = ParserError.Parentheses :: parseStack }
+                                                (\({ parseStack } as parserError) ->
+                                                    { parserError | parseStack = ParserError.Parentheses :: parseStack }
                                                 )
                                    )
 
@@ -213,16 +213,16 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
                         |> ParserState.trimState
                         |> nextParser
                         |> Result.mapError
-                            (\parseError ->
-                                (case parseError.errorType of
+                            (\parserError ->
+                                (case parserError.errorType of
                                     ParserError.EmptyString ->
-                                        { parseError
+                                        { parserError
                                             | errorType = ParserError.MissingBinaryOperand ParserError.LeftHandSide
                                             , parseStack = []
                                         }
 
                                     _ ->
-                                        parseError
+                                        parserError
                                 )
                                     |> (\({ parseStack } as improvedParserError) ->
                                             { improvedParserError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
@@ -233,17 +233,17 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
                 Ok parsedLhs ->
                     binaryOpRhsHelper 0 opDict nextParser parsedLhs op (ParserState.trimState rhsAndMore)
 
-                Err parseError ->
-                    case parseError.errorType of
+                Err parserError ->
+                    case parserError.errorType of
                         ParserError.MissingBinaryOperand _ ->
                             if isOperatorAlsoUnary op then
                                 binaryOperatorsSkipping (numToSkip + 1) opDict nextParser state
 
                             else
-                                Err parseError
+                                Err parserError
 
                         _ ->
-                            Err parseError
+                            Err parserError
 
         Nothing ->
             nextParser state
@@ -265,8 +265,8 @@ binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
                         |> ParserState.trimState
                         |> nextParser
                         |> Result.mapError
-                            (\({ parseStack } as parseError) ->
-                                { parseError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
+                            (\({ parseStack } as parserError) ->
+                                { parserError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
                             )
             in
             case parsedRhs of
@@ -281,8 +281,8 @@ binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
                         nextOp
                         moreRhs
 
-                Err parseError ->
-                    case parseError.errorType of
+                Err parserError ->
+                    case parserError.errorType of
                         ParserError.MissingBinaryOperand ParserError.RightHandSide ->
                             binaryOpRhsHelper
                                 (numToSkip + 1)
@@ -302,24 +302,24 @@ binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
                                 rhsAndMore
 
                         _ ->
-                            Err parseError
+                            Err parserError
 
         Nothing ->
             rhsAndMore
                 |> ParserState.trimState
                 |> nextParser
                 |> Result.mapError
-                    (\parseError ->
-                        (case parseError.errorType of
+                    (\parserError ->
+                        (case parserError.errorType of
                             ParserError.EmptyString ->
-                                { parseError
+                                { parserError
                                     | errorType = ParserError.MissingBinaryOperand ParserError.RightHandSide
                                     , parseStack = []
-                                    , position = parseError.position - 1
+                                    , position = parserError.position - 1
                                 }
 
                             _ ->
-                                parseError
+                                parserError
                         )
                             |> (\({ parseStack } as improvedParserError) ->
                                     { improvedParserError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
