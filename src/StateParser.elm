@@ -225,7 +225,10 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
                                         parserError
                                 )
                                     |> (\({ parseStack } as improvedParserError) ->
-                                            { improvedParserError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
+                                            { improvedParserError
+                                                | parseStack =
+                                                    ParserError.BinaryOperator op ParserError.LeftHandSide :: parseStack
+                                            }
                                        )
                             )
             in
