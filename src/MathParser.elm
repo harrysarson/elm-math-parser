@@ -24,19 +24,19 @@ import StateParser
 
 {-| A parser that converts a string into a mathematical expression.
 -}
-type alias MathParser =
-    String -> Result ParserError ParserResult
+type alias MathParser f =
+    String -> Result ParserError (ParserResult f)
 
 
 {-| }
 } Parse an expression.
 -}
-expression : MathParser
-expression str =
+expression : (String -> Maybe f) -> MathParser f
+expression stringToFunction str =
     { source = str
     , start = 0
     }
-        |> StateParser.expression
+        |> StateParser.expression stringToFunction
 
 
 

@@ -5,7 +5,7 @@ import MathExpression exposing (MathExpression)
 import Set exposing (Set)
 
 
-type alias ParserResult =
-    { expression : MathExpression
+type alias ParserResult f =
+    { expression : MathExpression f
     , symbols : List ( String, Int )
     }

@@ -51,7 +51,13 @@ splitStateSkipping :
     -> ParserState
     -> Maybe ( ParserState, a, ParserState )
 splitStateSkipping n chars ({ start, source } as state) =
-    findNthOneOfHelper n chars 0 "" state.source 0
+    findNthOneOfHelper
+        n
+        chars
+        { round = 0, square = 0 }
+        ""
+        state.source
+        0
         |> Maybe.map
             (\{ left, splitChar, right, leftSize } ->
                 ( { source = left
@@ -104,7 +110,7 @@ type alias FindResult a =
 findNthOneOfHelper :
     Int
     -> Dict Char a
-    -> Int
+    -> { round : Int, square : Int }
     -> String
     -> String
     -> Int
@@ -113,38 +119,100 @@ findNthOneOfHelper n chars closesRequired previousReversed source index =
     String.uncons source
         |> Maybe.andThen
             (\( first, rest ) ->
-                case closesRequired of
-                    0 ->
-                        if first == '(' then
-                            findNthOneOfHelper n chars 1 (String.cons first previousReversed) rest (index + 1)
+                if closesRequired.round == 0 && closesRequired.square == 0 then
+                    if first == '(' then
+                        findNthOneOfHelper
+                            n
+                            chars
+                            { round = 1, square = 0 }
+                            (String.cons first previousReversed)
+                            rest
+                            (index + 1)
 
-                        else
-                            case Dict.get first chars of
-                                Just splitChar ->
-                                    if n == 0 then
-                                        Just
-                                            { left = String.reverse previousReversed
-                                            , splitChar = splitChar
-                                            , right = rest
-                                            , leftSize = index
-                                            }
+                    else if first == '[' then
+                        findNthOneOfHelper
+                            n
+                            chars
+                            { round = 0, square = 1 }
+                            (String.cons first previousReversed)
+                            rest
+                            (index + 1)
 
-                                    else
-                                        findNthOneOfHelper (n - 1) chars 0 (String.cons first previousReversed) rest (index + 1)
+                    else
+                        case Dict.get first chars of
+                            Just splitChar ->
+                                if n == 0 then
+                                    Just
+                                        { left = String.reverse previousReversed
+                                        , splitChar = splitChar
+                                        , right = rest
+                                        , leftSize = index
+                                        }
 
-                                Nothing ->
-                                    findNthOneOfHelper n chars 0 (String.cons first previousReversed) rest (index + 1)
+                                else
+                                    findNthOneOfHelper
+                                        (n - 1)
+                                        chars
+                                        { round = 0, square = 0 }
+                                        (String.cons first previousReversed)
+                                        rest
+                                        (index + 1)
 
-                    _ ->
-                        case first of
-                            ')' ->
-                                findNthOneOfHelper n chars (closesRequired - 1) (String.cons first previousReversed) rest (index + 1)
+                            Nothing ->
+                                findNthOneOfHelper
+                                    n
+                                    chars
+                                    { round = 0, square = 0 }
+                                    (String.cons first previousReversed)
+                                    rest
+                                    (index + 1)
 
-                            '(' ->
-                                findNthOneOfHelper n chars (closesRequired + 1) (String.cons first previousReversed) rest (index + 1)
+                else
+                    case first of
+                        ')' ->
+                            findNthOneOfHelper
+                                n
+                                chars
+                                { closesRequired | round = closesRequired.round - 1 }
+                                (String.cons first previousReversed)
+                                rest
+                                (index + 1)
 
-                            _ ->
-                                findNthOneOfHelper n chars closesRequired (String.cons first previousReversed) rest (index + 1)
+                        '(' ->
+                            findNthOneOfHelper
+                                n
+                                chars
+                                { closesRequired | round = closesRequired.round + 1 }
+                                (String.cons first previousReversed)
+                                rest
+                                (index + 1)
+
+                        ']' ->
+                            findNthOneOfHelper
+                                n
+                                chars
+                                { closesRequired | square = closesRequired.square - 1 }
+                                (String.cons first previousReversed)
+                                rest
+                                (index + 1)
+
+                        '[' ->
+                            findNthOneOfHelper
+                                n
+                                chars
+                                { closesRequired | square = closesRequired.square + 1 }
+                                (String.cons first previousReversed)
+                                rest
+                                (index + 1)
+
+                        _ ->
+                            findNthOneOfHelper
+                                n
+                                chars
+                                closesRequired
+                                (String.cons first previousReversed)
+                                rest
+                                (index + 1)
             )
 
 

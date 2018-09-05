@@ -12,14 +12,14 @@ module MathToString exposing (stringifyExpression, stringifyBinaryOperator, stri
 import MathExpression exposing (..)
 
 
-stringifyWithParentheses : MathExpression -> String
-stringifyWithParentheses expression =
+stringifyWithParentheses : (f -> String) -> MathExpression f -> String
+stringifyWithParentheses functionToString expression =
     case expression of
         Symbol _ ->
-            stringifyExpression expression
+            stringifyExpression functionToString expression
 
         _ ->
-            "( " ++ stringifyExpression expression ++ " )"
+            "( " ++ stringifyExpression functionToString expression ++ " )"
 
 
 {-| Display a binary operator in string form.
@@ -54,17 +54,24 @@ stringifyUnaryOperator op =
 
 {-| Display an expression in string form.
 -}
-stringifyExpression : MathExpression -> String
-stringifyExpression expression =
+stringifyExpression : (f -> String) -> MathExpression f -> String
+stringifyExpression functionToString expression =
     case expression of
         BinaryOperation lhs op rhs ->
-            stringifyWithParentheses lhs ++ " " ++ stringifyBinaryOperator op ++ " " ++ stringifyWithParentheses rhs
+            stringifyWithParentheses functionToString lhs
+                ++ " "
+                ++ stringifyBinaryOperator op
+                ++ " "
+                ++ stringifyWithParentheses functionToString rhs
 
         UnaryOperation op expr ->
-            stringifyUnaryOperator op ++ " " ++ stringifyWithParentheses expr
+            stringifyUnaryOperator op ++ " " ++ stringifyWithParentheses functionToString expr
 
         Parentheses expr ->
-            stringifyWithParentheses expr
+            stringifyWithParentheses functionToString expr
 
         Symbol str ->
             str
+
+        Function f args ->
+            functionToString f ++ "[" ++ stringifyExpression functionToString args ++ "]"

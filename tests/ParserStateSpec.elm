@@ -103,78 +103,22 @@ tests =
                                   }
                                 )
                             )
-            , fuzz Fuzz.int "respects parentheses" <|
+            , describe "round parentheses" <| parenthesesTests "(" ")"
+            , describe "square parentheses" <| parenthesesTests "[" "]"
+            , fuzz Fuzz.int "mixed parentheses" <|
                 \start ->
-                    { source = "The (quick brown fox jumps) over the lazy dog."
-                    , start = start
-                    }
-                        |> splitStateSkipping 0 (Dict.singleton 'o' 'o' |> Dict.insert 'q' 'q')
-                        |> Expect.equal
-                            (Just
-                                ( { source = "The (quick brown fox jumps) "
-                                  , start = start
-                                  }
-                                , 'o'
-                                , { source = "ver the lazy dog."
-                                  , start = start + 29
-                                  }
-                                )
-                            )
-            , fuzz Fuzz.int "ignores every character after opening parentheses" <|
-                \start ->
-                    { source = "Th(e quick brown fox jumps over the lazy dog."
-                    , start = start
-                    }
-                        |> splitStateSkipping 0 (Dict.singleton 'e' 'e' |> Dict.insert 'q' 'q')
-                        |> Expect.equal Nothing
-            , fuzz Fuzz.int "splits on character before an opening parentheses" <|
-                \start ->
-                    { source = "The q(uick brown fox jumps over the lazy dog."
-                    , start = start
-                    }
-                        |> splitStateSkipping 0 (Dict.singleton 'o' 'o' |> Dict.insert 'q' 'q')
-                        |> Expect.equal
-                            (Just
-                                ( { source = "The "
-                                  , start = start
-                                  }
-                                , 'q'
-                                , { source = "(uick brown fox jumps over the lazy dog."
-                                  , start = start + 5
-                                  }
-                                )
-                            )
-            , fuzz Fuzz.int "respects nested parentheses" <|
-                \start ->
-                    { source = "The q(uick bro(wn fox jum)ps over the lazy d)og."
+                    { source = "The q(uick bro[wn fox jum]ps over the lazy d)og."
                     , start = start
                     }
                         |> splitStateSkipping 1 (Dict.singleton 'o' 'o' |> Dict.insert 'q' 'q')
                         |> Expect.equal
                             (Just
-                                ( { source = "The q(uick bro(wn fox jum)ps over the lazy d)"
+                                ( { source = "The q(uick bro[wn fox jum]ps over the lazy d)"
                                   , start = start
                                   }
                                 , 'o'
                                 , { source = "g."
                                   , start = start + 46
-                                  }
-                                )
-                            )
-            , fuzz Fuzz.int "be lenient with unmatched parentheses" <|
-                \start ->
-                    { source = "The q)uick b(rown fox jum)ps over the lazy dog."
-                    , start = start
-                    }
-                        |> splitStateSkipping 1 (Dict.singleton 'o' 'o' |> Dict.insert 'u' 'u')
-                        |> Expect.equal
-                            (Just
-                                ( { source = "The q)uick b(rown fox jum)ps "
-                                  , start = start
-                                  }
-                                , 'o'
-                                , { source = "ver the lazy dog."
-                                  , start = start + 30
                                   }
                                 )
                             )
@@ -190,12 +134,92 @@ tests =
         ]
 
 
+parenthesesTests : String -> String -> List Test.Test
+parenthesesTests open close =
+    [ fuzz Fuzz.int "respects parentheses" <|
+        \start ->
+            { source = "The " ++ open ++ "quick brown fox jumps" ++ close ++ " over the lazy dog."
+            , start = start
+            }
+                |> splitStateSkipping 0 (Dict.singleton 'o' 'o' |> Dict.insert 'q' 'q')
+                |> Expect.equal
+                    (Just
+                        ( { source = "The " ++ open ++ "quick brown fox jumps" ++ close ++ " "
+                          , start = start
+                          }
+                        , 'o'
+                        , { source = "ver the lazy dog."
+                          , start = start + 29
+                          }
+                        )
+                    )
+    , fuzz Fuzz.int "ignores every character after opening parentheses" <|
+        \start ->
+            { source = "Th" ++ open ++ "e quick brown fox jumps over the lazy dog."
+            , start = start
+            }
+                |> splitStateSkipping 0 (Dict.singleton 'e' 'e' |> Dict.insert 'q' 'q')
+                |> Expect.equal Nothing
+    , fuzz Fuzz.int "splits on character before an opening parentheses" <|
+        \start ->
+            { source = "The q" ++ open ++ "uick brown fox jumps over the lazy dog."
+            , start = start
+            }
+                |> splitStateSkipping 0 (Dict.singleton 'o' 'o' |> Dict.insert 'q' 'q')
+                |> Expect.equal
+                    (Just
+                        ( { source = "The "
+                          , start = start
+                          }
+                        , 'q'
+                        , { source = "" ++ open ++ "uick brown fox jumps over the lazy dog."
+                          , start = start + 5
+                          }
+                        )
+                    )
+    , fuzz Fuzz.int "respects nested parentheses" <|
+        \start ->
+            { source = "The q" ++ open ++ "uick bro" ++ open ++ "wn fox jum" ++ close ++ "ps over the lazy d" ++ close ++ "og."
+            , start = start
+            }
+                |> splitStateSkipping 1 (Dict.singleton 'o' 'o' |> Dict.insert 'q' 'q')
+                |> Expect.equal
+                    (Just
+                        ( { source = "The q" ++ open ++ "uick bro" ++ open ++ "wn fox jum" ++ close ++ "ps over the lazy d" ++ close ++ ""
+                          , start = start
+                          }
+                        , 'o'
+                        , { source = "g."
+                          , start = start + 46
+                          }
+                        )
+                    )
+    , fuzz Fuzz.int "be lenient with unmatched parentheses" <|
+        \start ->
+            { source = "The q" ++ close ++ "uick b" ++ open ++ "rown fox jum" ++ close ++ "ps over the lazy dog."
+            , start = start
+            }
+                |> splitStateSkipping 1 (Dict.singleton 'o' 'o' |> Dict.insert 'u' 'u')
+                |> Expect.equal
+                    (Just
+                        ( { source = "The q" ++ close ++ "uick b" ++ open ++ "rown fox jum" ++ close ++ "ps "
+                          , start = start
+                          }
+                        , 'o'
+                        , { source = "ver the lazy dog."
+                          , start = start + 30
+                          }
+                        )
+                    )
+    ]
+
+
 fuzzNonParenthesisChar : Fuzz.Fuzzer Char
 fuzzNonParenthesisChar =
     Fuzz.char
         |> Fuzz.map
             (\c ->
-                if c == '(' then
+                if c == '(' || c == '[' then
                     ' '
 
                 else

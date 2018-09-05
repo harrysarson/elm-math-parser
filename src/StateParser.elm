@@ -10,8 +10,8 @@ import ParserState exposing (ParserState)
 import Set
 
 
-type alias StateParser =
-    ParserState -> Result ParserError ParserResult
+type alias StateParser f =
+    ParserState -> Result ParserError (ParserResult f)
 
 
 binaryOperatorsDict : List (Dict Char MathExpression.BinaryOperator)
@@ -31,13 +31,13 @@ unaryOperatorsDict =
 
 {-| Parse an expression.
 -}
-expression : StateParser
-expression =
+expression : (String -> Maybe f) -> StateParser f
+expression stringToFunction =
     MaDebug.log "MathExpression"
         >> ParserState.trimState
         >> List.foldr
             (\opChars nextParser -> binaryOperators opChars nextParser)
-            (unaryOperators unaryOperatorsDict (parenthesis symbol))
+            (unaryOperators unaryOperatorsDict (parenthesis stringToFunction symbol))
             binaryOperatorsDict
         >> Result.mapError
             (\({ parseStack } as parserError) ->
@@ -45,12 +45,12 @@ expression =
             )
 
 
-binaryOperators : Dict Char MathExpression.BinaryOperator -> StateParser -> StateParser
+binaryOperators : Dict Char MathExpression.BinaryOperator -> StateParser f -> StateParser f
 binaryOperators opDict nextParser =
     checkEmptyState (binaryOperatorsSkipping 0 opDict nextParser)
 
 
-unaryOperators : Dict Char MathExpression.UnaryOperator -> StateParser -> StateParser
+unaryOperators : Dict Char MathExpression.UnaryOperator -> StateParser f -> StateParser f
 unaryOperators opCharsDict nextParser =
     checkEmptyState
         (\state ->
@@ -107,8 +107,8 @@ unaryOperators opCharsDict nextParser =
         )
 
 
-parenthesis : StateParser -> StateParser
-parenthesis nextParser =
+parenthesis : (String -> Maybe f) -> StateParser f -> StateParser f
+parenthesis stringToFunction nextParser =
     checkEmptyState
         (\state ->
             let
@@ -125,7 +125,7 @@ parenthesis nextParser =
                                         { source = parenthesisContent
                                         , start = start + 1
                                         }
-                                            |> expression
+                                            |> expression stringToFunction
                                             |> Result.mapError
                                                 (\parserError ->
                                                     case parserError.errorType of
@@ -159,7 +159,7 @@ parenthesis nextParser =
         )
 
 
-symbol : StateParser
+symbol : StateParser f
 symbol =
     checkEmptyState
         (\({ source, start } as state) ->
@@ -179,7 +179,7 @@ symbol =
 -- Helper Functions --
 
 
-checkEmptyState : StateParser -> StateParser
+checkEmptyState : StateParser f -> StateParser f
 checkEmptyState nextParser ({ source, start } as state) =
     case source of
         "" ->
@@ -193,7 +193,7 @@ checkEmptyState nextParser ({ source, start } as state) =
             nextParser state
 
 
-binaryOperatorsSkipping : Int -> Dict Char MathExpression.BinaryOperator -> StateParser -> StateParser
+binaryOperatorsSkipping : Int -> Dict Char MathExpression.BinaryOperator -> StateParser f -> StateParser f
 binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state) =
     let
         opChars =
@@ -255,10 +255,10 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
 binaryOpRhsHelper :
     Int
     -> Dict Char MathExpression.BinaryOperator
-    -> StateParser
-    -> ParserResult
+    -> StateParser f
+    -> ParserResult f
     -> MathExpression.BinaryOperator
-    -> StateParser
+    -> StateParser f
 binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
     case ParserState.splitStateSkipping numToSkip opDict rhsAndMore of
         Just ( nextRhs, nextOp, moreRhs ) ->

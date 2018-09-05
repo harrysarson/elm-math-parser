@@ -63,7 +63,7 @@ view : String -> Browser.Document Msg
 view content =
     let
         parsed =
-            expression content
+            expression (always Nothing) content
 
         numbers =
             content
@@ -131,7 +131,7 @@ view content =
                     )
              , Just <| div [] [ text (Debug.toString parsed) ]
              , parsed
-                |> Result.map (\p -> div [] [ text (MathToString.stringifyExpression p.expression) ])
+                |> Result.map (\p -> div [] [ text (MathToString.stringifyExpression (\_ -> "ERROR") p.expression) ])
                 |> Result.toMaybe
              , parsed
                 |> Result.map .symbols

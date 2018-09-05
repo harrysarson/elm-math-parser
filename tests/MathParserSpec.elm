@@ -64,7 +64,7 @@ tests =
                             }
                 in
                 (lhs ++ MathToString.stringifyBinaryOperator op ++ rhs)
-                    |> expression
+                    |> expression (always Nothing)
                     |> Expect.equal parseResult
         , fuzz2
             MaFuzz.binaryOperator
@@ -94,7 +94,7 @@ tests =
                     ++ b
                     ++ MathToString.stringifyBinaryOperator op
                     ++ c
-                    |> expression
+                    |> expression (always Nothing)
                     |> Result.map .expression
                     |> Expect.equal expectedAst
         , fuzz3
@@ -128,7 +128,7 @@ tests =
                     ++ spaces
                     ++ MathToString.stringifyUnaryOperator unaryOp
                     ++ b
-                    |> expression
+                    |> expression (always Nothing)
                     |> Result.map .expression
                     |> Expect.equal expectedAst
         , describe "Operator precedence"
@@ -161,7 +161,7 @@ makePrecedenceTest withParenthesis =
     <|
         \() ->
             withoutParenthesis
-                |> expression
+                |> expression (always Nothing)
                 |> Result.map .expression
-                |> Result.map MathToString.stringifyExpression
+                |> Result.map (MathToString.stringifyExpression <| always "DEBUG")
                 |> Expect.equal (Ok withParenthesis)
