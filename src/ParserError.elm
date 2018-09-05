@@ -35,6 +35,8 @@ type ErrorType
     = EmptyString
     | EmptyParentheses
     | InvalidChar Char
+    | MissingBinaryOperand Side
+    | MissingUnaryOperand
     | MissingClosingParenthesis
 
 

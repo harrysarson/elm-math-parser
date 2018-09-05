@@ -55,8 +55,15 @@ unaryOperators opCharsDict nextParser =
     checkEmptyState
         (\state ->
             let
+                label =
+                    opCharsDict
+                        |> Dict.keys
+                        |> List.map String.fromChar
+                        |> String.join ", "
+                        |> String.append "UnaryOperators "
+
                 { source, start } =
-                    MaDebug.log "UnaryOperator" state
+                    MaDebug.log label state
             in
             case String.uncons source of
                 Just ( opChar, rhs ) ->
@@ -69,6 +76,18 @@ unaryOperators opCharsDict nextParser =
                                     }
                                         |> ParserState.trimState
                                         |> nextParser
+                                        |> Result.mapError
+                                            (\parseError ->
+                                                case parseError.errorType of
+                                                    ParserError.EmptyString ->
+                                                        { position = start
+                                                        , errorType = ParserError.MissingUnaryOperand
+                                                        , parseStack = []
+                                                        }
+
+                                                    _ ->
+                                                        parseError
+                                            )
                                         |> Result.mapError
                                             (\({ parseStack } as parseError) ->
                                                 { parseError | parseStack = ParserError.UnaryOperator op :: parseStack }
@@ -94,7 +113,7 @@ parenthesis nextParser =
         (\state ->
             let
                 { source, start } =
-                    MaDebug.log "UnaryOperator" state
+                    MaDebug.log "Parenthesis" state
             in
             case String.uncons source of
                 Just ( possiblyOpenParenthesis, rest ) ->
@@ -194,8 +213,20 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
                         |> ParserState.trimState
                         |> nextParser
                         |> Result.mapError
-                            (\({ parseStack } as parseError) ->
-                                { parseError | parseStack = ParserError.BinaryOperator op ParserError.LeftHandSide :: parseStack }
+                            (\parseError ->
+                                (case parseError.errorType of
+                                    ParserError.EmptyString ->
+                                        { parseError
+                                            | errorType = ParserError.MissingBinaryOperand ParserError.LeftHandSide
+                                            , parseStack = []
+                                        }
+
+                                    _ ->
+                                        parseError
+                                )
+                                    |> (\({ parseStack } as improvedParserError) ->
+                                            { improvedParserError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
+                                       )
                             )
             in
             case parsedLhsResult of
@@ -204,8 +235,12 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
 
                 Err parseError ->
                     case parseError.errorType of
-                        ParserError.EmptyString ->
-                            binaryOperatorsSkipping (numToSkip + 1) opDict nextParser state
+                        ParserError.MissingBinaryOperand _ ->
+                            if isOperatorAlsoUnary op then
+                                binaryOperatorsSkipping (numToSkip + 1) opDict nextParser state
+
+                            else
+                                Err parseError
 
                         _ ->
                             Err parseError
@@ -248,8 +283,23 @@ binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
 
                 Err parseError ->
                     case parseError.errorType of
+                        ParserError.MissingBinaryOperand ParserError.RightHandSide ->
+                            binaryOpRhsHelper
+                                (numToSkip + 1)
+                                opDict
+                                nextParser
+                                lhs
+                                op
+                                rhsAndMore
+
                         ParserError.EmptyString ->
-                            binaryOpRhsHelper (numToSkip + 1) opDict nextParser lhs op rhsAndMore
+                            binaryOpRhsHelper
+                                (numToSkip + 1)
+                                opDict
+                                nextParser
+                                lhs
+                                op
+                                rhsAndMore
 
                         _ ->
                             Err parseError
@@ -259,10 +309,21 @@ binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
                 |> ParserState.trimState
                 |> nextParser
                 |> Result.mapError
-                    (\({ parseStack } as parseError) ->
-                        { parseError
-                            | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack
-                        }
+                    (\parseError ->
+                        (case parseError.errorType of
+                            ParserError.EmptyString ->
+                                { parseError
+                                    | errorType = ParserError.MissingBinaryOperand ParserError.RightHandSide
+                                    , parseStack = []
+                                    , position = parseError.position - 1
+                                }
+
+                            _ ->
+                                parseError
+                        )
+                            |> (\({ parseStack } as improvedParserError) ->
+                                    { improvedParserError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
+                               )
                     )
                 |> Result.map
                     (\rhs ->
@@ -270,6 +331,22 @@ binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
                         , symbols = lhs.symbols ++ rhs.symbols
                         }
                     )
+
+
+isOperatorAlsoUnary : MathExpression.BinaryOperator -> Bool
+isOperatorAlsoUnary op =
+    case op of
+        MathExpression.Add ->
+            True
+
+        MathExpression.Subtract ->
+            True
+
+        MathExpression.Multiply ->
+            False
+
+        MathExpression.Divide ->
+            False
 
 
 symbolHelper : ParserState -> Maybe ParserError
