@@ -4,14 +4,14 @@ import Char
 import Dict exposing (Dict)
 import MaDebug
 import MathExpression exposing (MathExpression)
-import ParseResult exposing (ParseResult)
 import ParserError exposing (ParserError)
 import ParserState exposing (ParserState)
+import PaserResult exposing (PaserResult)
 import Set
 
 
 type alias StateParser =
-    ParserState -> Result ParserError ParseResult
+    ParserState -> Result ParserError PaserResult
 
 
 binaryOperatorsDict : List (Dict Char MathExpression.BinaryOperator)
@@ -253,7 +253,7 @@ binaryOpRhsHelper :
     Int
     -> Dict Char MathExpression.BinaryOperator
     -> StateParser
-    -> ParseResult
+    -> PaserResult
     -> MathExpression.BinaryOperator
     -> StateParser
 binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
