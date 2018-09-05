@@ -45,18 +45,22 @@ symbol =
         |> Fuzz.map String.fromList
 
 
-binaryOperator : Fuzz.Fuzzer Char
+binaryOperator : Fuzz.Fuzzer MathExpression.BinaryOperator
 binaryOperator =
-    MathExpression.binaryOperators
-        |> List.map (Set.toList >> List.map Fuzz.constant)
-        |> List.map Fuzz.oneOf
+    [ MathExpression.Add
+    , MathExpression.Subtract
+    , MathExpression.Multiply
+    , MathExpression.Divide
+    ]
+        |> List.map Fuzz.constant
         |> Fuzz.oneOf
 
 
-unaryOperator : Fuzz.Fuzzer Char
+unaryOperator : Fuzz.Fuzzer MathExpression.UnaryOperator
 unaryOperator =
-    MathExpression.unaryOperators
-        |> Set.toList
+    [ MathExpression.UnaryAdd
+    , MathExpression.UnarySubtract
+    ]
         |> List.map Fuzz.constant
         |> Fuzz.oneOf
 

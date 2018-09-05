@@ -5,8 +5,9 @@ import Browser.Dom as Dom
 import Html exposing (Attribute, Html, div, input, li, ol, span, table, td, text, tr)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
-import MathExpression exposing (stringify)
+import MathExpression
 import MathParser exposing (expression)
+import MathToString
 import Task
 
 
@@ -130,7 +131,7 @@ view content =
                     )
              , Just <| div [] [ text (Debug.toString parsed) ]
              , parsed
-                |> Result.map (\p -> div [] [ text (stringify p.expression) ])
+                |> Result.map (\p -> div [] [ text (MathToString.stringifyExpression p.expression) ])
                 |> Result.toMaybe
              , parsed
                 |> Result.map .symbols

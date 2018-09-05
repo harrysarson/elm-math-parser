@@ -1,7 +1,6 @@
 module MathExpression exposing
     ( MathExpression(..)
-    , binaryOperators, unaryOperators
-    , stringify
+    , BinaryOperator(..), UnaryOperator(..)
     )
 
 {-| This library contains types needed to represent simple mathematical expressions.
@@ -14,62 +13,33 @@ module MathExpression exposing
 
 # Definitions
 
-@docs binaryOperators, unaryOperators
-
-
-# Output
-
-@docs stringify
+@docs BinaryOperator, UnaryOperator
 
 -}
 
 import Set exposing (Set)
 
 
-binaryOperators : List (Set Char)
-binaryOperators =
-    [ [ '+', '-' ]
-    , [ '*', '/' ]
-    ]
-        |> List.map Set.fromList
-
-
-unaryOperators : Set Char
-unaryOperators =
-    [ '+', '-' ]
-        |> Set.fromList
-
-
 {-| A mathematical expression.
 -}
 type MathExpression
-    = BinaryOperator MathExpression Char MathExpression
-    | UnaryOperator Char MathExpression
+    = BinaryOperation MathExpression BinaryOperator MathExpression
+    | UnaryOperation UnaryOperator MathExpression
     | Parentheses MathExpression
     | Symbol String
 
 
-stringifyWithParentheses : MathExpression -> String
-stringifyWithParentheses expression =
-    case expression of
-        Symbol _ ->
-            stringify expression
+{-| An operator with a left and right hand side.
+-}
+type BinaryOperator
+    = Add
+    | Subtract
+    | Multiply
+    | Divide
 
-        _ ->
-            "( " ++ stringify expression ++ " )"
 
-
-stringify : MathExpression -> String
-stringify expression =
-    case expression of
-        BinaryOperator lhs op rhs ->
-            stringifyWithParentheses lhs ++ " " ++ String.fromChar op ++ " " ++ stringifyWithParentheses rhs
-
-        UnaryOperator op expr ->
-            String.fromChar op ++ " " ++ stringifyWithParentheses expr
-
-        Parentheses expr ->
-            stringifyWithParentheses expr
-
-        Symbol str ->
-            str
+{-| An operator with only a right hand side.
+-}
+type UnaryOperator
+    = UnaryAdd
+    | UnarySubtract

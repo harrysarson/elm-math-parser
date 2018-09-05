@@ -5,6 +5,7 @@ import Fuzz
 import MaFuzz
 import MathExpression exposing (MathExpression)
 import MathParser exposing (expression)
+import MathToString
 import ParserError
 import String
 import Test exposing (describe, fuzz, fuzz2, fuzz3, test)
@@ -33,7 +34,7 @@ tests =
                     parseResult =
                         Ok <|
                             { expression =
-                                MathExpression.BinaryOperator
+                                MathExpression.BinaryOperation
                                     (MathExpression.Symbol trimmedLhs)
                                     op
                                     (MathExpression.Symbol trimmedRhs)
@@ -62,7 +63,7 @@ tests =
                                         )
                             }
                 in
-                (lhs ++ String.fromChar op ++ rhs)
+                (lhs ++ MathToString.stringifyBinaryOperator op ++ rhs)
                     |> expression
                     |> Expect.equal parseResult
         , fuzz2
@@ -79,8 +80,8 @@ tests =
                 let
                     expectedAst =
                         Ok <|
-                            MathExpression.BinaryOperator
-                                (MathExpression.BinaryOperator
+                            MathExpression.BinaryOperation
+                                (MathExpression.BinaryOperation
                                     (MathExpression.Symbol (String.trim a))
                                     op
                                     (MathExpression.Symbol (String.trim b))
@@ -89,9 +90,9 @@ tests =
                                 (MathExpression.Symbol (String.trim c))
                 in
                 a
-                    ++ String.fromChar op
+                    ++ MathToString.stringifyBinaryOperator op
                     ++ b
-                    ++ String.fromChar op
+                    ++ MathToString.stringifyBinaryOperator op
                     ++ c
                     |> expression
                     |> Result.map .expression
@@ -114,18 +115,18 @@ tests =
                 let
                     expectedAst =
                         Ok <|
-                            MathExpression.BinaryOperator
+                            MathExpression.BinaryOperation
                                 (MathExpression.Symbol (String.trim a))
                                 binaryOp
-                                (MathExpression.UnaryOperator
+                                (MathExpression.UnaryOperation
                                     unaryOp
                                     (MathExpression.Symbol (String.trim b))
                                 )
                 in
                 a
-                    ++ String.fromChar binaryOp
+                    ++ MathToString.stringifyBinaryOperator binaryOp
                     ++ spaces
-                    ++ String.fromChar unaryOp
+                    ++ MathToString.stringifyUnaryOperator unaryOp
                     ++ b
                     |> expression
                     |> Result.map .expression
@@ -173,5 +174,5 @@ makePrecedenceTest withParenthesis =
             withoutParenthesis
                 |> expression
                 |> Result.map .expression
-                |> Result.map MathExpression.stringify
+                |> Result.map MathToString.stringifyExpression
                 |> Expect.equal (Ok withParenthesis)

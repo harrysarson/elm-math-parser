@@ -1,6 +1,7 @@
 module StateParser exposing (StateParser, expression)
 
 import Char
+import Dict exposing (Dict)
 import MaDebug
 import MathExpression exposing (MathExpression)
 import ParseResult exposing (ParseResult)
@@ -13,6 +14,21 @@ type alias StateParser =
     ParserState -> Result ParserError ParseResult
 
 
+binaryOperatorsDict : List (Dict Char MathExpression.BinaryOperator)
+binaryOperatorsDict =
+    [ Dict.singleton '+' MathExpression.Add
+        |> Dict.insert '-' MathExpression.Subtract
+    , Dict.singleton '*' MathExpression.Multiply
+        |> Dict.insert '/' MathExpression.Divide
+    ]
+
+
+unaryOperatorsDict : Dict Char MathExpression.UnaryOperator
+unaryOperatorsDict =
+    Dict.singleton '+' MathExpression.UnaryAdd
+        |> Dict.insert '-' MathExpression.UnarySubtract
+
+
 {-| Parse an expression.
 -}
 expression : StateParser
@@ -21,21 +37,21 @@ expression =
         >> ParserState.trimState
         >> List.foldr
             (\opChars nextParser -> binaryOperators opChars nextParser)
-            (unaryOperators (MathExpression.unaryOperators |> Set.toList) (parenthesis symbol))
-            (MathExpression.binaryOperators |> List.map Set.toList)
+            (unaryOperators unaryOperatorsDict (parenthesis symbol))
+            binaryOperatorsDict
         >> Result.mapError
             (\({ parseStack } as parseError) ->
                 { parseError | parseStack = ParserError.MathExpression :: parseStack }
             )
 
 
-binaryOperators : List Char -> StateParser -> StateParser
-binaryOperators opChars nextParser =
-    checkEmptyState (binaryOperatorsSkipping 0 opChars nextParser)
+binaryOperators : Dict Char MathExpression.BinaryOperator -> StateParser -> StateParser
+binaryOperators opDict nextParser =
+    checkEmptyState (binaryOperatorsSkipping 0 opDict nextParser)
 
 
-unaryOperators : List Char -> StateParser -> StateParser
-unaryOperators opChars nextParser =
+unaryOperators : Dict Char MathExpression.UnaryOperator -> StateParser -> StateParser
+unaryOperators opCharsDict nextParser =
     checkEmptyState
         (\state ->
             let
@@ -43,28 +59,29 @@ unaryOperators opChars nextParser =
                     MaDebug.log "UnaryOperator" state
             in
             case String.uncons source of
-                Just ( op, rhs ) ->
-                    if List.any (\c -> c == op) opChars then
-                        let
-                            parsedRhs =
-                                { source = rhs
-                                , start = start + 1
-                                }
-                                    |> ParserState.trimState
-                                    |> nextParser
-                                    |> Result.mapError
-                                        (\({ parseStack } as parseError) ->
-                                            { parseError | parseStack = ParserError.UnaryOperator op :: parseStack }
-                                        )
-                        in
-                        Result.map
-                            (\parseResult ->
-                                { parseResult | expression = MathExpression.UnaryOperator op parseResult.expression }
-                            )
-                            parsedRhs
+                Just ( opChar, rhs ) ->
+                    case Dict.get opChar opCharsDict of
+                        Just op ->
+                            let
+                                parsedRhs =
+                                    { source = rhs
+                                    , start = start + 1
+                                    }
+                                        |> ParserState.trimState
+                                        |> nextParser
+                                        |> Result.mapError
+                                            (\({ parseStack } as parseError) ->
+                                                { parseError | parseStack = ParserError.UnaryOperator op :: parseStack }
+                                            )
+                            in
+                            Result.map
+                                (\parseResult ->
+                                    { parseResult | expression = MathExpression.UnaryOperation op parseResult.expression }
+                                )
+                                parsedRhs
 
-                    else
-                        nextParser state
+                        Nothing ->
+                            nextParser state
 
                 Nothing ->
                     nextParser state
@@ -157,16 +174,19 @@ checkEmptyState nextParser ({ source, start } as state) =
             nextParser state
 
 
-binaryOperatorsSkipping : Int -> List Char -> StateParser -> StateParser
-binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state) =
+binaryOperatorsSkipping : Int -> Dict Char MathExpression.BinaryOperator -> StateParser -> StateParser
+binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state) =
     let
+        opChars =
+            Dict.keys opDict
+
         label =
             opChars
                 |> List.map String.fromChar
                 |> String.join ", "
                 |> String.append ("BinaryOperators (skipping " ++ String.fromInt numToSkip ++ ") ")
     in
-    case ParserState.splitStateSkipping numToSkip opChars (MaDebug.log label state) of
+    case ParserState.splitStateSkipping numToSkip opDict (MaDebug.log label state) of
         Just ( lhs, op, rhsAndMore ) ->
             let
                 parsedLhsResult =
@@ -180,12 +200,12 @@ binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state
             in
             case parsedLhsResult of
                 Ok parsedLhs ->
-                    binaryOpRhsHelper 0 opChars nextParser parsedLhs op (ParserState.trimState rhsAndMore)
+                    binaryOpRhsHelper 0 opDict nextParser parsedLhs op (ParserState.trimState rhsAndMore)
 
                 Err parseError ->
                     case parseError.errorType of
                         ParserError.EmptyString ->
-                            binaryOperatorsSkipping (numToSkip + 1) opChars nextParser state
+                            binaryOperatorsSkipping (numToSkip + 1) opDict nextParser state
 
                         _ ->
                             Err parseError
@@ -194,9 +214,15 @@ binaryOperatorsSkipping numToSkip opChars nextParser ({ source, start } as state
             nextParser state
 
 
-binaryOpRhsHelper : Int -> List Char -> StateParser -> ParseResult -> Char -> StateParser
-binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
-    case ParserState.splitStateSkipping numToSkip opChars rhsAndMore of
+binaryOpRhsHelper :
+    Int
+    -> Dict Char MathExpression.BinaryOperator
+    -> StateParser
+    -> ParseResult
+    -> MathExpression.BinaryOperator
+    -> StateParser
+binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
+    case ParserState.splitStateSkipping numToSkip opDict rhsAndMore of
         Just ( nextRhs, nextOp, moreRhs ) ->
             let
                 parsedRhs =
@@ -212,9 +238,9 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                 Ok rhs ->
                     binaryOpRhsHelper
                         0
-                        opChars
+                        opDict
                         nextParser
-                        { expression = MathExpression.BinaryOperator lhs.expression op rhs.expression
+                        { expression = MathExpression.BinaryOperation lhs.expression op rhs.expression
                         , symbols = lhs.symbols ++ rhs.symbols
                         }
                         nextOp
@@ -223,7 +249,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                 Err parseError ->
                     case parseError.errorType of
                         ParserError.EmptyString ->
-                            binaryOpRhsHelper (numToSkip + 1) opChars nextParser lhs op rhsAndMore
+                            binaryOpRhsHelper (numToSkip + 1) opDict nextParser lhs op rhsAndMore
 
                         _ ->
                             Err parseError
@@ -240,7 +266,7 @@ binaryOpRhsHelper numToSkip opChars nextParser lhs op rhsAndMore =
                     )
                 |> Result.map
                     (\rhs ->
-                        { expression = MathExpression.BinaryOperator lhs.expression op rhs.expression
+                        { expression = MathExpression.BinaryOperation lhs.expression op rhs.expression
                         , symbols = lhs.symbols ++ rhs.symbols
                         }
                     )

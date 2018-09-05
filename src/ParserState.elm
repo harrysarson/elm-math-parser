@@ -17,6 +17,8 @@ module ParserState exposing
 
 -}
 
+import Dict exposing (Dict)
+
 
 {-| The state of a partially parsed expression.
 
@@ -43,7 +45,11 @@ The first `n` occurrences are ignored.
 source of the state.
 
 -}
-splitStateSkipping : Int -> List Char -> ParserState -> Maybe ( ParserState, Char, ParserState )
+splitStateSkipping :
+    Int
+    -> Dict Char a
+    -> ParserState
+    -> Maybe ( ParserState, a, ParserState )
 splitStateSkipping n chars ({ start, source } as state) =
     findNthOneOfHelper n chars 0 "" state.source 0
         |> Maybe.map
@@ -87,15 +93,22 @@ findClosingParenthesis previousReversed source index =
 -- todo: rename type and function
 
 
-type alias FindResult =
+type alias FindResult a =
     { left : String
-    , splitChar : Char
+    , splitChar : a
     , right : String
     , leftSize : Int
     }
 
 
-findNthOneOfHelper : Int -> List Char -> Int -> String -> String -> Int -> Maybe FindResult
+findNthOneOfHelper :
+    Int
+    -> Dict Char a
+    -> Int
+    -> String
+    -> String
+    -> Int
+    -> Maybe (FindResult a)
 findNthOneOfHelper n chars closesRequired previousReversed source index =
     String.uncons source
         |> Maybe.andThen
@@ -105,20 +118,22 @@ findNthOneOfHelper n chars closesRequired previousReversed source index =
                         if first == '(' then
                             findNthOneOfHelper n chars 1 (String.cons first previousReversed) rest (index + 1)
 
-                        else if List.any (\c -> c == first) chars then
-                            if n == 0 then
-                                Just
-                                    { left = String.reverse previousReversed
-                                    , splitChar = first
-                                    , right = rest
-                                    , leftSize = index
-                                    }
-
-                            else
-                                findNthOneOfHelper (n - 1) chars 0 (String.cons first previousReversed) rest (index + 1)
-
                         else
-                            findNthOneOfHelper n chars 0 (String.cons first previousReversed) rest (index + 1)
+                            case Dict.get first chars of
+                                Just splitChar ->
+                                    if n == 0 then
+                                        Just
+                                            { left = String.reverse previousReversed
+                                            , splitChar = splitChar
+                                            , right = rest
+                                            , leftSize = index
+                                            }
+
+                                    else
+                                        findNthOneOfHelper (n - 1) chars 0 (String.cons first previousReversed) rest (index + 1)
+
+                                Nothing ->
+                                    findNthOneOfHelper n chars 0 (String.cons first previousReversed) rest (index + 1)
 
                     _ ->
                         case first of

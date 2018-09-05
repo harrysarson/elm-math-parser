@@ -9,6 +9,8 @@ module ParserError exposing (ErrorType(..), ParseFunction(..), ParserError, Side
 
 -}
 
+import MathExpression
+
 
 {-| An error created whilst parsing an expression.
 
@@ -40,8 +42,8 @@ type ErrorType
 -}
 type ParseFunction
     = Symbol
-    | BinaryOperator Char Side
-    | UnaryOperator Char
+    | BinaryOperator MathExpression.BinaryOperator Side
+    | UnaryOperator MathExpression.UnaryOperator
     | Parentheses
     | MathExpression
 

@@ -1,6 +1,7 @@
 module ParserStateSpec exposing (tests)
 
 import Char
+import Dict
 import Expect
 import Fuzz
 import MaFuzz
@@ -9,29 +10,39 @@ import String
 import Test exposing (describe, fuzz, fuzz2, test)
 
 
+type Dummy
+    = Dummy
+
+
 tests : Test.Test
 tests =
     describe "parse state"
         [ describe "splitStateOneOf"
             [ fuzz (Fuzz.tuple3 ( Fuzz.int, Fuzz.intRange 0 10, Fuzz.list Fuzz.char )) "empty source string gives Nothing" <|
                 \( start, n, chars ) ->
+                    let
+                        charDict =
+                            chars
+                                |> List.map (\x -> ( x, x ))
+                                |> Dict.fromList
+                    in
                     { source = ""
                     , start = start
                     }
-                        |> splitStateSkipping n chars
+                        |> splitStateSkipping n charDict
                         |> Expect.equal Nothing
             , fuzz Fuzz.int "splitting on first instance of character" <|
                 \start ->
                     { source = "The quick brown fox jumps over the lazy dog."
                     , start = start
                     }
-                        |> splitStateSkipping 0 [ 'h' ]
+                        |> splitStateSkipping 0 (Dict.singleton 'h' Dummy)
                         |> Expect.equal
                             (Just
                                 ( { source = "T"
                                   , start = start
                                   }
-                                , 'h'
+                                , Dummy
                                 , { source = "e quick brown fox jumps over the lazy dog."
                                   , start = start + 2
                                   }
@@ -42,13 +53,13 @@ tests =
                     { source = "The quick brown fox jumps over the lazy dog."
                     , start = start
                     }
-                        |> splitStateSkipping 1 [ 'o' ]
+                        |> splitStateSkipping 1 (Dict.singleton 'o' 235)
                         |> Expect.equal
                             (Just
                                 ( { source = "The quick brown f"
                                   , start = start
                                   }
-                                , 'o'
+                                , 235
                                 , { source = "x jumps over the lazy dog."
                                   , start = start + 18
                                   }
@@ -59,13 +70,13 @@ tests =
                     { source = "The quick brown fox jumps over the lazy dog."
                     , start = start
                     }
-                        |> splitStateSkipping 1 [ 'o', 'q' ]
+                        |> splitStateSkipping 1 (Dict.singleton 'o' "o" |> Dict.insert 'q' "q")
                         |> Expect.equal
                             (Just
                                 ( { source = "The quick br"
                                   , start = start
                                   }
-                                , 'o'
+                                , "o"
                                 , { source = "wn fox jumps over the lazy dog."
                                   , start = start + 13
                                   }
@@ -76,7 +87,8 @@ tests =
                     let
                         listOfAscii =
                             List.range 0 255
-                                |> List.map Char.fromCode
+                                |> List.map (\x -> ( Char.fromCode x, x ))
+                                |> Dict.fromList
                     in
                     { state | source = String.cons firstChar source }
                         |> splitStateSkipping 0 listOfAscii
@@ -85,7 +97,7 @@ tests =
                                 ( { source = ""
                                   , start = start
                                   }
-                                , firstChar
+                                , Char.toCode firstChar
                                 , { source = source
                                   , start = start + 1
                                   }
@@ -96,7 +108,7 @@ tests =
                     { source = "The (quick brown fox jumps) over the lazy dog."
                     , start = start
                     }
-                        |> splitStateSkipping 0 [ 'q', 'o' ]
+                        |> splitStateSkipping 0 (Dict.singleton 'o' 'o' |> Dict.insert 'q' 'q')
                         |> Expect.equal
                             (Just
                                 ( { source = "The (quick brown fox jumps) "
@@ -113,14 +125,14 @@ tests =
                     { source = "Th(e quick brown fox jumps over the lazy dog."
                     , start = start
                     }
-                        |> splitStateSkipping 0 [ 'q', 'e' ]
+                        |> splitStateSkipping 0 (Dict.singleton 'e' 'e' |> Dict.insert 'q' 'q')
                         |> Expect.equal Nothing
             , fuzz Fuzz.int "splits on character before an opening parentheses" <|
                 \start ->
                     { source = "The q(uick brown fox jumps over the lazy dog."
                     , start = start
                     }
-                        |> splitStateSkipping 0 [ 'q', 'o' ]
+                        |> splitStateSkipping 0 (Dict.singleton 'o' 'o' |> Dict.insert 'q' 'q')
                         |> Expect.equal
                             (Just
                                 ( { source = "The "
@@ -137,7 +149,7 @@ tests =
                     { source = "The q(uick bro(wn fox jum)ps over the lazy d)og."
                     , start = start
                     }
-                        |> splitStateSkipping 1 [ 'q', 'o' ]
+                        |> splitStateSkipping 1 (Dict.singleton 'o' 'o' |> Dict.insert 'q' 'q')
                         |> Expect.equal
                             (Just
                                 ( { source = "The q(uick bro(wn fox jum)ps over the lazy d)"
@@ -154,7 +166,7 @@ tests =
                     { source = "The q)uick b(rown fox jum)ps over the lazy dog."
                     , start = start
                     }
-                        |> splitStateSkipping 1 [ 'u', 'o' ]
+                        |> splitStateSkipping 1 (Dict.singleton 'o' 'o' |> Dict.insert 'u' 'u')
                         |> Expect.equal
                             (Just
                                 ( { source = "The q)uick b(rown fox jum)ps "
