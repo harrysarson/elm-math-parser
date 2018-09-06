@@ -37,6 +37,7 @@ type BinaryOperator
     | Subtract
     | Multiply
     | Divide
+    | Exponentiate
 
 
 {-| An operator with only a right hand side.

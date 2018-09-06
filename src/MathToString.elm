@@ -42,6 +42,9 @@ stringifyBinaryOperator op =
         Divide ->
             "/"
 
+        Exponentiate ->
+            "^"
+
 
 {-| Display an unary operator in string form.
 -}

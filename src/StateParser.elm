@@ -20,6 +20,7 @@ binaryOperatorsDict =
         |> Dict.insert '-' MathExpression.Subtract
     , Dict.singleton '*' MathExpression.Multiply
         |> Dict.insert '/' MathExpression.Divide
+    , Dict.singleton '^' MathExpression.Exponentiate
     ]
 
 
@@ -235,7 +236,7 @@ symbolOrFunction stringToFunction =
                                             )
                                         |> Result.mapError
                                             (\({ parseStack } as parserError) ->
-                                                { parserError | parseStack = ParserError.Parentheses :: parseStack }
+                                                { parserError | parseStack = ParserError.Function :: parseStack }
                                             )
                                )
 
@@ -425,6 +426,9 @@ isOperatorAlsoUnary op =
             False
 
         MathExpression.Divide ->
+            False
+
+        MathExpression.Exponentiate ->
             False
 
 
