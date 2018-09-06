@@ -33,12 +33,24 @@ unaryOperatorsDict =
 -}
 expression : (String -> Maybe f) -> StateParser f
 expression stringToFunction =
+    let
+        parsers : List (StateParser f -> StateParser f)
+        parsers =
+            List.map binaryOperators binaryOperatorsDict
+                ++ [ unaryOperators unaryOperatorsDict
+                   , parenthesis stringToFunction
+                   ]
+
+        f : (StateParser f -> StateParser f) -> StateParser f -> StateParser f
+        f prevousParser currentParser =
+            prevousParser currentParser
+    in
     MaDebug.log "MathExpression"
         >> ParserState.trimState
         >> List.foldr
-            (\opChars nextParser -> binaryOperators opChars nextParser)
-            (unaryOperators unaryOperatorsDict (parenthesis stringToFunction symbol))
-            binaryOperatorsDict
+            f
+            symbol
+            parsers
         >> Result.mapError
             (\({ parseStack } as parserError) ->
                 { parserError | parseStack = ParserError.MathExpression :: parseStack }
