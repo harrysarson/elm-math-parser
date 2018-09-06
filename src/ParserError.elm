@@ -38,6 +38,7 @@ type ErrorType
     | MissingBinaryOperand Side
     | MissingUnaryOperand
     | MissingClosingParenthesis
+    | UndefinedFunction String
 
 
 {-| Different parser functions used to track the location of a parsing error.
@@ -47,6 +48,7 @@ type ParseFunction
     | BinaryOperator MathExpression.BinaryOperator Side
     | UnaryOperator MathExpression.UnaryOperator
     | Parentheses
+    | Function
     | MathExpression
 
 

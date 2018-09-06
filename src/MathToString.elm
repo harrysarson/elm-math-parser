@@ -17,6 +17,8 @@ stringifyWithParentheses functionToString expression =
     case expression of
         Symbol _ ->
             stringifyExpression functionToString expression
+        Function _ _ ->
+            stringifyExpression functionToString expression
 
         _ ->
             "( " ++ stringifyExpression functionToString expression ++ " )"

@@ -49,7 +49,7 @@ expression stringToFunction =
         >> ParserState.trimState
         >> List.foldr
             f
-            symbol
+            (symbolOrFunction stringToFunction)
             parsers
         >> Result.mapError
             (\({ parseStack } as parserError) ->
@@ -187,6 +187,68 @@ symbol =
         )
 
 
+symbolOrFunction : (String -> Maybe f) -> StateParser f
+symbolOrFunction stringToFunction =
+    checkEmptyState
+        (\({ source, start } as state) ->
+            case String.split "[" source of
+                funcName :: rest0 :: rest ->
+                    let
+                        bodyAndClosing =
+                            String.join "]" (rest0 :: rest)
+                    in
+                    if String.endsWith "]" bodyAndClosing then
+                        bodyAndClosing
+                            |> String.dropRight 1
+                            |> (\parenthesisContent ->
+                                    { source = parenthesisContent
+                                    , start = start + 1
+                                    }
+                                        |> expression stringToFunction
+                                        |> Result.andThen
+                                            (\parseResult ->
+                                                funcName
+                                                    |> stringToFunction
+                                                    |> Maybe.map
+                                                        (\func ->
+                                                            { parseResult
+                                                                | expression = MathExpression.Function func parseResult.expression
+                                                            }
+                                                        )
+                                                    |> Result.fromMaybe
+                                                        { position = start
+                                                        , errorType = ParserError.UndefinedFunction funcName
+                                                        , parseStack = []
+                                                        }
+                                            )
+                                        |> Result.mapError
+                                            (\parserError ->
+                                                case parserError.errorType of
+                                                    ParserError.EmptyString ->
+                                                        { position = start + 1
+                                                        , errorType = ParserError.EmptyParentheses
+                                                        , parseStack = []
+                                                        }
+
+                                                    _ ->
+                                                        parserError
+                                            )
+                                        |> Result.mapError
+                                            (\({ parseStack } as parserError) ->
+                                                { parserError | parseStack = ParserError.Parentheses :: parseStack }
+                                            )
+                               )
+
+                    else
+                        Err
+                            { errorType = ParserError.MissingClosingParenthesis
+                            , position = start + String.length source - 1
+                            , parseStack = [ ParserError.Function ]
+                            }
+
+                _ ->
+                    symbol state
+        )
 
 -- Helper Functions --
 

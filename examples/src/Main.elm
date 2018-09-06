@@ -8,6 +8,7 @@ import Html.Events exposing (onInput)
 import MathExpression
 import MathParser exposing (expression)
 import MathToString
+import MathFunction
 import Task
 
 
@@ -63,7 +64,7 @@ view : String -> Browser.Document Msg
 view content =
     let
         parsed =
-            expression (always Nothing) content
+            MathParser.standardExpression content
 
         numbers =
             content
@@ -131,7 +132,7 @@ view content =
                     )
              , Just <| div [] [ text (Debug.toString parsed) ]
              , parsed
-                |> Result.map (\p -> div [] [ text (MathToString.stringifyExpression (\_ -> "ERROR") p.expression) ])
+                |> Result.map (\p -> div [] [ text (MathToString.stringifyExpression MathFunction.toString p.expression) ])
                 |> Result.toMaybe
              , parsed
                 |> Result.map .symbols
