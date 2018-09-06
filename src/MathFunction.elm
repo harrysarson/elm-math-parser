@@ -1,4 +1,4 @@
-module MathFunction exposing (MathFunction(..), fromString, toString, toRealFunction)
+module MathFunction exposing (MathFunction(..), fromString, toRealFunction, toString)
 
 {-| Basic functions to use with expressions.
 

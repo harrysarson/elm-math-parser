@@ -6,9 +6,9 @@ import Html exposing (Attribute, Html, div, input, li, ol, span, table, td, text
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 import MathExpression
+import MathFunction
 import MathParser exposing (expression)
 import MathToString
-import MathFunction
 import Task
 
 
