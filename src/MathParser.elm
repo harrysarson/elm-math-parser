@@ -18,7 +18,6 @@ import Char
 import MaDebug
 import MathFunction exposing (MathFunction)
 import ParserError exposing (ParserError)
-import ParserResult exposing (ParserResult)
 import Set
 import StateParser
 
@@ -26,7 +25,7 @@ import StateParser
 {-| A parser that converts a string into a mathematical expression.
 -}
 type alias MathParser f =
-    String -> Result ParserError (ParserResult f)
+    String -> Result ParserError (StateParser.ParserResult f)
 
 
 {-| Parse an expression.

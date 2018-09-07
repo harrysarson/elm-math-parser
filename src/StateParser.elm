@@ -1,13 +1,18 @@
-module StateParser exposing (StateParser, expression)
+module StateParser exposing (ParserResult, StateParser, expression)
 
 import Char
 import Dict exposing (Dict)
 import MaDebug
 import MathExpression exposing (MathExpression)
 import ParserError exposing (ParserError)
-import ParserResult exposing (ParserResult)
 import ParserState exposing (ParserState)
 import Set
+
+
+type alias ParserResult f =
+    { expression : MathExpression f
+    , symbols : List ( String, Int )
+    }
 
 
 type alias StateParser f =
