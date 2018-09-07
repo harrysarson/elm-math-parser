@@ -45,7 +45,7 @@ evaluate getRealFunction expression =
                 |> Result.map (getRealFunction function)
 
 
-evaluateBinaryOperator : MathExpression.BinaryOperator -> (Float -> Float -> Float)
+evaluateBinaryOperator : MathExpression.BinaryOperator -> Float -> Float -> Float
 evaluateBinaryOperator op =
     case op of
         MathExpression.Add ->
@@ -64,7 +64,7 @@ evaluateBinaryOperator op =
             (^)
 
 
-evaluateUnaryOperator : MathExpression.UnaryOperator -> (Float -> Float)
+evaluateUnaryOperator : MathExpression.UnaryOperator -> Float -> Float
 evaluateUnaryOperator op =
     case op of
         MathExpression.UnaryAdd ->
