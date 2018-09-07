@@ -22,7 +22,7 @@ stringifyWithParentheses functionToString expression =
             stringifyExpression functionToString expression
 
         _ ->
-            "( " ++ stringifyExpression functionToString expression ++ " )"
+            "(" ++ stringifyExpression functionToString expression ++ ")"
 
 
 {-| Display a binary operator in string form.
@@ -71,7 +71,7 @@ stringifyExpression functionToString expression =
                 ++ stringifyWithParentheses functionToString rhs
 
         UnaryOperation op expr ->
-            stringifyUnaryOperator op ++ " " ++ stringifyWithParentheses functionToString expr
+            stringifyUnaryOperator op ++ stringifyWithParentheses functionToString expr
 
         Parentheses expr ->
             stringifyWithParentheses functionToString expr
