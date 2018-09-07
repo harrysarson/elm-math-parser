@@ -5,6 +5,7 @@ import Browser.Dom as Dom
 import Html exposing (Attribute, Html, div, input, li, ol, span, table, td, text, tr)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
+import MathEvaluator
 import MathExpression
 import MathFunction
 import MathParser exposing (expression)
@@ -153,6 +154,15 @@ view content =
                             )
                     )
                 |> Result.toMaybe
+             , parsed
+                |> Result.toMaybe
+                |> Maybe.map .expression
+                |> Maybe.map (MathEvaluator.evaluate MathFunction.toRealFunction)
+                |> Maybe.map Debug.toString
+                |> Maybe.map
+                    (\s ->
+                        div [] [ text s ]
+                    )
              ]
                 |> justList
             )
