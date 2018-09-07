@@ -1,15 +1,16 @@
-module MaFuzz exposing (addSpaces, binaryOperator, parseState, spaces, symbol, unaryOperator)
+module MaFuzz exposing (addSpaces, binaryOperator, mathFunction, parseState, spaces, symbol, unaryOperator)
 
 import Char
-import Fuzz
+import Fuzz exposing (Fuzzer)
 import MathExpression
+import MathFunction exposing (MathFunction)
 import ParserState exposing (ParserState)
 import Random exposing (Generator)
 import Random.Extra
 import Set
 
 
-symbolChar : Fuzz.Fuzzer Char
+symbolChar : Fuzzer Char
 symbolChar =
     let
         randomChar =
@@ -38,14 +39,14 @@ symbolChar =
         |> Fuzz.map Char.fromCode
 
 
-symbol : Fuzz.Fuzzer String
+symbol : Fuzzer String
 symbol =
     Fuzz.list symbolChar
         |> Fuzz.map2 (::) symbolChar
         |> Fuzz.map String.fromList
 
 
-binaryOperator : Fuzz.Fuzzer MathExpression.BinaryOperator
+binaryOperator : Fuzzer MathExpression.BinaryOperator
 binaryOperator =
     [ MathExpression.Add
     , MathExpression.Subtract
@@ -56,7 +57,7 @@ binaryOperator =
         |> Fuzz.oneOf
 
 
-unaryOperator : Fuzz.Fuzzer MathExpression.UnaryOperator
+unaryOperator : Fuzzer MathExpression.UnaryOperator
 unaryOperator =
     [ MathExpression.UnaryAdd
     , MathExpression.UnarySubtract
@@ -65,20 +66,35 @@ unaryOperator =
         |> Fuzz.oneOf
 
 
-spaces : Fuzz.Fuzzer String
+mathFunction : Fuzzer MathFunction
+mathFunction =
+    [ MathFunction.NaturalLogarithm
+    , MathFunction.SquareRoot
+    , MathFunction.Sine
+    , MathFunction.Cosine
+    , MathFunction.Tangent
+    , MathFunction.ArcSine
+    , MathFunction.ArcCosine
+    , MathFunction.ArcTangent
+    ]
+        |> List.map Fuzz.constant
+        |> Fuzz.oneOf
+
+
+spaces : Fuzzer String
 spaces =
     Fuzz.list (Fuzz.constant ' ')
         |> Fuzz.map String.fromList
 
 
-addSpaces : Fuzz.Fuzzer String -> Fuzz.Fuzzer String
+addSpaces : Fuzzer String -> Fuzzer String
 addSpaces fuzz =
     spaces
         |> Fuzz.map2 String.append fuzz
         |> Fuzz.map2 String.append spaces
 
 
-parseState : Fuzz.Fuzzer ParserState
+parseState : Fuzzer ParserState
 parseState =
     let
         sourceCharFuzz =
