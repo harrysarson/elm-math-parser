@@ -34,6 +34,16 @@ unaryOperatorsDict =
 -}
 expression : (String -> Maybe f) -> StateParser f
 expression stringToFunction =
+    MaDebug.log "MathExpression"
+        >> expressionHelper stringToFunction
+        >> Result.mapError
+            (\({ parseStack } as parserError) ->
+                { parserError | parseStack = ParserError.MathExpression :: parseStack }
+            )
+
+
+expressionHelper : (String -> Maybe f) -> StateParser f
+expressionHelper stringToFunction =
     let
         parsers : List (StateParser f -> StateParser f)
         parsers =
@@ -41,21 +51,12 @@ expression stringToFunction =
                 ++ [ unaryOperators unaryOperatorsDict
                    , parenthesis stringToFunction
                    ]
-
-        f : (StateParser f -> StateParser f) -> StateParser f -> StateParser f
-        f prevousParser currentParser =
-            prevousParser currentParser
     in
-    MaDebug.log "MathExpression"
-        >> ParserState.trimState
+    ParserState.trimState
         >> List.foldr
-            f
+            identity
             (symbolOrFunction stringToFunction)
             parsers
-        >> Result.mapError
-            (\({ parseStack } as parserError) ->
-                { parserError | parseStack = ParserError.MathExpression :: parseStack }
-            )
 
 
 binaryOperators : Dict Char MathExpression.BinaryOperator -> StateParser f -> StateParser f
@@ -138,7 +139,7 @@ parenthesis stringToFunction nextParser =
                                         { source = parenthesisContent
                                         , start = start + 1
                                         }
-                                            |> expression stringToFunction
+                                            |> expressionHelper stringToFunction
                                             |> Result.mapError
                                                 (\parserError ->
                                                     case parserError.errorType of
@@ -205,7 +206,7 @@ symbolOrFunction stringToFunction =
                                     { source = parenthesisContent
                                     , start = start + 1
                                     }
-                                        |> expression stringToFunction
+                                        |> expressionHelper stringToFunction
                                         |> Result.andThen
                                             (\parseResult ->
                                                 funcName
