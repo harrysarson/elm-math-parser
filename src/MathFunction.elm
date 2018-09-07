@@ -12,6 +12,7 @@ module MathFunction exposing (MathFunction(..), fromString, toRealFunction, toSt
 -}
 type MathFunction
     = NaturalLogarithm
+    | SquareRoot
       -- Trigonometric
     | Sine
     | Cosine
@@ -26,6 +27,9 @@ fromString name =
     case name of
         "log" ->
             Just NaturalLogarithm
+
+        "sqrt" ->
+            Just SquareRoot
 
         "sin" ->
             Just Sine
@@ -55,6 +59,9 @@ toString func =
         NaturalLogarithm ->
             "log"
 
+        SquareRoot ->
+            "sqrt"
+
         Sine ->
             "sin"
 
@@ -79,6 +86,9 @@ toRealFunction func =
     case func of
         NaturalLogarithm ->
             logBase e
+
+        SquareRoot ->
+            sqrt
 
         Sine ->
             sin
