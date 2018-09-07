@@ -20,6 +20,10 @@ tests =
         , makePrecedenceTest "(+str) - 19"
         , makePrecedenceTest "(8 * (-2)) - (STR / 7)"
         , makePrecedenceTest "2 - (4 / (-8))"
+        , makePrecedenceTest "(5 ^ 2) - (4 / (-8))"
+        , makePrecedenceTest "a + ((3 / (5 ^ 3)) * 8)"
+        , makePrecedenceTest "x - (y')"
+        , makePrecedenceTest "jkasn / ((65 ^ faifinfinfin)')"
         ]
 
 

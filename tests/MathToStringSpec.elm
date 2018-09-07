@@ -23,6 +23,8 @@ tests =
             , mathToStringTest "(-6) / 2"
             , mathToStringTest "4.4"
             , mathToStringTest "123.568e12"
+            , mathToStringTest "1e2'"
+            , mathToStringTest "((6 * 4)') / 2"
             ]
         ]
 

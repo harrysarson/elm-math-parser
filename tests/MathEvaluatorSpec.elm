@@ -27,6 +27,7 @@ tests =
             , evaluatorTest "-6 / 2" -3
             , evaluatorTest "4.4" 4.4
             , evaluatorTest "123.568e12" 1.23568e14
+            , evaluatorTest "4e2'" 4.0e2
             ]
         ]
 

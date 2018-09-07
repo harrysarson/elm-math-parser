@@ -73,6 +73,9 @@ stringifyExpression functionToString expression =
         UnaryOperation op expr ->
             stringifyUnaryOperator op ++ stringifyWithParentheses functionToString expr
 
+        ConjugateTranspose lhs ->
+            stringifyWithParentheses functionToString lhs ++ "'"
+
         Parentheses expr ->
             stringifyWithParentheses functionToString expr
 

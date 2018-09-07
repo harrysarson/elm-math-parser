@@ -25,6 +25,7 @@ import Set exposing (Set)
 type MathExpression f
     = BinaryOperation (MathExpression f) BinaryOperator (MathExpression f)
     | UnaryOperation UnaryOperator (MathExpression f)
+    | ConjugateTranspose (MathExpression f)
     | Parentheses (MathExpression f)
     | Symbol String
     | Function f (MathExpression f)

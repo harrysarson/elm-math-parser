@@ -37,16 +37,18 @@ tests =
         , describe "Missing operands"
             [ test "Just a unary operator" <|
                 \() -> errorExpect "+" 0 ParserError.MissingUnaryOperand
-            , test "Just a valid binary operator" <|
-                \() -> errorExpect "*" 0 (ParserError.MissingBinaryOperand ParserError.LeftHandSide)
             , test "Just a binary operator" <|
                 \() -> errorExpect "*" 0 (ParserError.MissingBinaryOperand ParserError.LeftHandSide)
+            , test "Just a conjugate transpose" <|
+                \() -> errorExpect "'" 0 ParserError.MissingConjugateTransposeOperand
             , test "Binary operator with only lhs" <|
                 \() -> errorExpect "5 *" 2 (ParserError.MissingBinaryOperand ParserError.RightHandSide)
             , test "Binary operator with only rhs" <|
                 \() -> errorExpect "/ 3" 0 (ParserError.MissingBinaryOperand ParserError.LeftHandSide)
             , test "Binary/unary operator with only lhs" <|
                 \() -> errorExpect "5 +" 2 (ParserError.MissingBinaryOperand ParserError.RightHandSide)
+            , test "Tranpose operator missing operand" <|
+                \() -> errorExpect "5 * ' + 2" 4 ParserError.MissingConjugateTransposeOperand
             ]
         ]
 

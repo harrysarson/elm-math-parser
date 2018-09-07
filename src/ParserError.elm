@@ -37,6 +37,7 @@ type ErrorType
     | InvalidChar Char
     | MissingBinaryOperand Side
     | MissingUnaryOperand
+    | MissingConjugateTransposeOperand
     | MissingClosingParenthesis
     | UndefinedFunction String
 
@@ -47,6 +48,7 @@ type ParseFunction
     = Symbol
     | BinaryOperator MathExpression.BinaryOperator Side
     | UnaryOperator MathExpression.UnaryOperator
+    | ConjugateTranspose
     | Parentheses
     | Function
     | MathExpression

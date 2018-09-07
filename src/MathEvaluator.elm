@@ -33,6 +33,9 @@ evaluate getRealFunction expression =
             in
             Result.map opFunc rhsValue
 
+        MathExpression.ConjugateTranspose lhs ->
+            evaluate getRealFunction lhs
+
         MathExpression.Parentheses expr ->
             evaluate getRealFunction expr
 

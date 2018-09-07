@@ -54,6 +54,7 @@ expressionHelper stringToFunction =
         parsers =
             List.map binaryOperators binaryOperatorsDict
                 ++ [ unaryOperators unaryOperatorsDict
+                   , congugateTranspose
                    , parenthesis stringToFunction
                    ]
     in
@@ -120,6 +121,55 @@ unaryOperators opCharsDict nextParser =
 
                         Nothing ->
                             nextParser state
+
+                Nothing ->
+                    nextParser state
+        )
+
+
+congugateTranspose : StateParser f -> StateParser f
+congugateTranspose nextParser =
+    checkEmptyState
+        (\state ->
+            let
+                { source, start } =
+                    MaDebug.log "congugateTranspose" state
+            in
+            case
+                source
+                    |> String.reverse
+                    |> String.uncons
+            of
+                Just ( apostrophe, lhsReversed ) ->
+                    if apostrophe == '\'' then
+                        { source = String.reverse lhsReversed
+                        , start = start + 1
+                        }
+                            |> ParserState.trimState
+                            |> nextParser
+                            |> Result.map
+                                (\parseResult ->
+                                    { parseResult | expression = MathExpression.ConjugateTranspose parseResult.expression }
+                                )
+                            |> Result.mapError
+                                (\parserError ->
+                                    case parserError.errorType of
+                                        ParserError.EmptyString ->
+                                            { position = start
+                                            , errorType = ParserError.MissingConjugateTransposeOperand
+                                            , parseStack = []
+                                            }
+
+                                        _ ->
+                                            parserError
+                                )
+                            |> Result.mapError
+                                (\({ parseStack } as parserError) ->
+                                    { parserError | parseStack = ParserError.ConjugateTranspose :: parseStack }
+                                )
+
+                    else
+                        nextParser state
 
                 Nothing ->
                     nextParser state
