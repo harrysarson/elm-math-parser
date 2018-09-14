@@ -259,7 +259,7 @@ symbolOrFunction stringToFunction =
                             |> String.dropRight 1
                             |> (\parenthesisContent ->
                                     { source = parenthesisContent
-                                    , start = start + 1
+                                    , start = start + String.length funcName + 1
                                     }
                                         |> expressionHelper stringToFunction
                                         |> Result.andThen

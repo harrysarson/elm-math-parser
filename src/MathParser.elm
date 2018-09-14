@@ -1,5 +1,5 @@
 module MathParser exposing
-    ( MathParser
+    ( ParserResult, MathParser
     , expression, standardExpression
     )
 
@@ -9,7 +9,7 @@ A string expression is converted into an abstract syntax tree.
 
 # Mathematics Parsers
 
-@docs MathParser
+@docs ParserResult, MathParser
 @docs expression, standardExpression
 
 -}
@@ -22,10 +22,14 @@ import Set
 import StateParser
 
 
+type alias ParserResult f =
+    StateParser.ParserResult f
+
+
 {-| A parser that converts a string into a mathematical expression.
 -}
 type alias MathParser f =
-    String -> Result ParserError (StateParser.ParserResult f)
+    String -> Result ParserError (ParserResult f)
 
 
 {-| Parse an expression.
