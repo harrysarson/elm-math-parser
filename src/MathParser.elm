@@ -1,6 +1,6 @@
 module MathParser exposing
     ( ParserResult, MathParser
-    , expression, standardExpression
+    , expression
     )
 
 {-| This library allows simple mathematical expressions to be parsed in elm.
@@ -10,7 +10,7 @@ A string expression is converted into an abstract syntax tree.
 # Mathematics Parsers
 
 @docs ParserResult, MathParser
-@docs expression, standardExpression
+@docs expression
 
 -}
 
@@ -18,6 +18,7 @@ import Char
 import MaDebug
 import MathFunction exposing (MathFunction)
 import ParserError exposing (ParserError)
+import ParserState exposing (ParserState)
 import Set
 import StateParser
 
@@ -34,22 +35,12 @@ type alias MathParser f =
 
 {-| Parse an expression.
 -}
-expression : (String -> Maybe f) -> MathParser f
-expression stringToFunction str =
+expression : (ParserState -> Maybe f) -> MathParser f
+expression parseFunction str =
     { source = str
     , start = 0
     }
-        |> StateParser.expression stringToFunction
-
-
-{-| Parse an expression using standard mathematic functions.
--}
-standardExpression : MathParser MathFunction
-standardExpression str =
-    { source = str
-    , start = 0
-    }
-        |> StateParser.expression MathFunction.fromString
+        |> StateParser.expression parseFunction
 
 
 

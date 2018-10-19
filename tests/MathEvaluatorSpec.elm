@@ -43,7 +43,7 @@ evaluatorTest expression expected =
     <|
         \() ->
             expression
-                |> MathParser.expression MathFunction.fromString
+                |> MathParser.expression (.source >> MathFunction.fromString)
                 |> (\parsedResult ->
                         case parsedResult of
                             Ok parsed ->

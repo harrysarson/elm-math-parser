@@ -34,7 +34,7 @@ mathToStringTest expression =
     test expression <|
         \() ->
             expression
-                |> MathParser.expression MathFunction.fromString
+                |> MathParser.expression (.source >> MathFunction.fromString)
                 |> Result.map
                     (.expression
                         >> MathToString.stringifyExpression MathFunction.toString
@@ -42,7 +42,7 @@ mathToStringTest expression =
                 |> Expect.all
                     [ Expect.equal (Ok expression)
                     , Result.map
-                        (MathParser.expression MathFunction.fromString
+                        (MathParser.expression (.source >> MathFunction.fromString)
                             >> Result.map
                                 (.expression
                                     >> MathToString.stringifyExpression MathFunction.toString

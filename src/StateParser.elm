@@ -37,10 +37,10 @@ unaryOperatorsDict =
 
 {-| Parse an expression.
 -}
-expression : (String -> Maybe f) -> StateParser f
-expression stringToFunction state =
+expression : (ParserState -> Maybe f) -> StateParser f
+expression parseFunction state =
     MaDebug.log "MathExpression" state
-        |> expressionHelper stringToFunction
+        |> expressionHelper parseFunction
         |> Result.mapError
             (\({ parseStack } as parserError) ->
                 { parserError
@@ -53,21 +53,21 @@ expression stringToFunction state =
             )
 
 
-expressionHelper : (String -> Maybe f) -> StateParser f
-expressionHelper stringToFunction =
+expressionHelper : (ParserState -> Maybe f) -> StateParser f
+expressionHelper parseFunction =
     let
         parsers : List (StateParser f -> StateParser f)
         parsers =
             List.map binaryOperators binaryOperatorsDict
                 ++ [ unaryOperators unaryOperatorsDict
                    , congugateTranspose
-                   , parenthesis stringToFunction
+                   , parenthesis parseFunction
                    ]
     in
     ParserState.trimState
         >> List.foldr
             identity
-            (symbolOrFunction stringToFunction)
+            (symbolOrFunction parseFunction)
             parsers
 
 
@@ -197,8 +197,8 @@ congugateTranspose nextParser =
         )
 
 
-parenthesis : (String -> Maybe f) -> StateParser f -> StateParser f
-parenthesis stringToFunction nextParser =
+parenthesis : (ParserState -> Maybe f) -> StateParser f -> StateParser f
+parenthesis parseFunction nextParser =
     checkEmptyState
         (\state ->
             let
@@ -219,7 +219,7 @@ parenthesis stringToFunction nextParser =
                                                 }
                                         in
                                         parenContentState
-                                            |> expressionHelper stringToFunction
+                                            |> expressionHelper parseFunction
                                             |> Result.mapError
                                                 (\parserError ->
                                                     case parserError.errorType of
@@ -281,8 +281,8 @@ symbol =
         )
 
 
-symbolOrFunction : (String -> Maybe f) -> StateParser f
-symbolOrFunction stringToFunction =
+symbolOrFunction : (ParserState -> Maybe f) -> StateParser f
+symbolOrFunction parseFunction =
     checkEmptyState
         (\({ source, start } as state) ->
             case String.split "[" source of
@@ -302,7 +302,7 @@ symbolOrFunction stringToFunction =
                                             }
                                     in
                                     parenContentState
-                                        |> expressionHelper stringToFunction
+                                        |> expressionHelper parseFunction
                                         |> Result.mapError
                                             (\parserError ->
                                                 case parserError.errorType of
@@ -327,8 +327,10 @@ symbolOrFunction stringToFunction =
                                             )
                                         |> Result.andThen
                                             (\parseResult ->
-                                                funcName
-                                                    |> stringToFunction
+                                                { source = funcName
+                                                , start = start
+                                                }
+                                                    |> parseFunction
                                                     |> Maybe.map
                                                         (\func ->
                                                             { parseResult
