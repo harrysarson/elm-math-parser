@@ -38,12 +38,18 @@ unaryOperatorsDict =
 {-| Parse an expression.
 -}
 expression : (String -> Maybe f) -> StateParser f
-expression stringToFunction =
-    MaDebug.log "MathExpression"
-        >> expressionHelper stringToFunction
-        >> Result.mapError
+expression stringToFunction state =
+    MaDebug.log "MathExpression" state
+        |> expressionHelper stringToFunction
+        |> Result.mapError
             (\({ parseStack } as parserError) ->
-                { parserError | parseStack = ParserError.MathExpression :: parseStack }
+                { parserError
+                    | parseStack =
+                        ( ParserError.MathExpression
+                        , state
+                        )
+                            :: parseStack
+                }
             )
 
 
@@ -90,11 +96,14 @@ unaryOperators opCharsDict nextParser =
                     case Dict.get opChar opCharsDict of
                         Just op ->
                             let
-                                parsedRhs =
+                                rhsState =
                                     { source = rhs
                                     , start = start + 1
                                     }
                                         |> ParserState.trimState
+
+                                parsedRhs =
+                                    rhsState
                                         |> nextParser
                                         |> Result.mapError
                                             (\parserError ->
@@ -110,7 +119,13 @@ unaryOperators opCharsDict nextParser =
                                             )
                                         |> Result.mapError
                                             (\({ parseStack } as parserError) ->
-                                                { parserError | parseStack = ParserError.UnaryOperator op :: parseStack }
+                                                { parserError
+                                                    | parseStack =
+                                                        ( ParserError.UnaryOperator op
+                                                        , rhsState
+                                                        )
+                                                            :: parseStack
+                                                }
                                             )
                             in
                             Result.map
@@ -165,7 +180,13 @@ congugateTranspose nextParser =
                                 )
                             |> Result.mapError
                                 (\({ parseStack } as parserError) ->
-                                    { parserError | parseStack = ParserError.ConjugateTranspose :: parseStack }
+                                    { parserError
+                                        | parseStack =
+                                            ( ParserError.ConjugateTranspose
+                                            , state
+                                            )
+                                                :: parseStack
+                                    }
                                 )
 
                     else
@@ -191,9 +212,13 @@ parenthesis stringToFunction nextParser =
                             rest
                                 |> String.dropRight 1
                                 |> (\parenthesisContent ->
-                                        { source = parenthesisContent
-                                        , start = start + 1
-                                        }
+                                        let
+                                            parenContentState =
+                                                { source = parenthesisContent
+                                                , start = start + 1
+                                                }
+                                        in
+                                        parenContentState
                                             |> expressionHelper stringToFunction
                                             |> Result.mapError
                                                 (\parserError ->
@@ -209,7 +234,13 @@ parenthesis stringToFunction nextParser =
                                                 )
                                             |> Result.mapError
                                                 (\({ parseStack } as parserError) ->
-                                                    { parserError | parseStack = ParserError.Parentheses :: parseStack }
+                                                    { parserError
+                                                        | parseStack =
+                                                            ( ParserError.Parentheses
+                                                            , parenContentState
+                                                            )
+                                                                :: parseStack
+                                                    }
                                                 )
                                    )
 
@@ -217,7 +248,13 @@ parenthesis stringToFunction nextParser =
                             Err
                                 { errorType = ParserError.MissingClosingParenthesis
                                 , position = start + String.length source - 1
-                                , parseStack = [ ParserError.Parentheses ]
+                                , parseStack =
+                                    [ ( ParserError.Parentheses
+                                      , { source = rest
+                                        , start = start + 1
+                                        }
+                                      )
+                                    ]
                                 }
 
                     else
@@ -258,10 +295,36 @@ symbolOrFunction stringToFunction =
                         bodyAndClosing
                             |> String.dropRight 1
                             |> (\parenthesisContent ->
-                                    { source = parenthesisContent
-                                    , start = start + String.length funcName + 1
-                                    }
+                                    let
+                                        parenContentState =
+                                            { source = parenthesisContent
+                                            , start = start + String.length funcName + 1
+                                            }
+                                    in
+                                    parenContentState
                                         |> expressionHelper stringToFunction
+                                        |> Result.mapError
+                                            (\parserError ->
+                                                case parserError.errorType of
+                                                    ParserError.EmptyString ->
+                                                        { position = parenContentState.start
+                                                        , errorType = ParserError.EmptyParentheses
+                                                        , parseStack = []
+                                                        }
+
+                                                    _ ->
+                                                        parserError
+                                            )
+                                        |> Result.mapError
+                                            (\({ parseStack } as parserError) ->
+                                                { parserError
+                                                    | parseStack =
+                                                        ( ParserError.Function
+                                                        , parenContentState
+                                                        )
+                                                            :: parseStack
+                                                }
+                                            )
                                         |> Result.andThen
                                             (\parseResult ->
                                                 funcName
@@ -275,24 +338,14 @@ symbolOrFunction stringToFunction =
                                                     |> Result.fromMaybe
                                                         { position = start
                                                         , errorType = ParserError.UndefinedFunction funcName
-                                                        , parseStack = []
+                                                        , parseStack =
+                                                            [ ( ParserError.Function
+                                                              , { source = funcName
+                                                                , start = start
+                                                                }
+                                                              )
+                                                            ]
                                                         }
-                                            )
-                                        |> Result.mapError
-                                            (\parserError ->
-                                                case parserError.errorType of
-                                                    ParserError.EmptyString ->
-                                                        { position = start + 1
-                                                        , errorType = ParserError.EmptyParentheses
-                                                        , parseStack = []
-                                                        }
-
-                                                    _ ->
-                                                        parserError
-                                            )
-                                        |> Result.mapError
-                                            (\({ parseStack } as parserError) ->
-                                                { parserError | parseStack = ParserError.Function :: parseStack }
                                             )
                                )
 
@@ -300,7 +353,13 @@ symbolOrFunction stringToFunction =
                         Err
                             { errorType = ParserError.MissingClosingParenthesis
                             , position = start + String.length source - 1
-                            , parseStack = [ ParserError.Function ]
+                            , parseStack =
+                                [ ( ParserError.Function
+                                  , { source = bodyAndClosing
+                                    , start = start + 1
+                                    }
+                                  )
+                                ]
                             }
 
                 _ ->
@@ -360,7 +419,10 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
                                     |> (\({ parseStack } as improvedParserError) ->
                                             { improvedParserError
                                                 | parseStack =
-                                                    ParserError.BinaryOperator op ParserError.LeftHandSide :: parseStack
+                                                    ( ParserError.BinaryOperator op ParserError.LeftHandSide
+                                                    , lhs
+                                                    )
+                                                        :: parseStack
                                             }
                                        )
                             )
@@ -402,7 +464,13 @@ binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
                         |> nextParser
                         |> Result.mapError
                             (\({ parseStack } as parserError) ->
-                                { parserError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
+                                { parserError
+                                    | parseStack =
+                                        ( ParserError.BinaryOperator op ParserError.RightHandSide
+                                        , nextRhs
+                                        )
+                                            :: parseStack
+                                }
                             )
             in
             case parsedRhs of
@@ -458,7 +526,13 @@ binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
                                 parserError
                         )
                             |> (\({ parseStack } as improvedParserError) ->
-                                    { improvedParserError | parseStack = ParserError.BinaryOperator op ParserError.RightHandSide :: parseStack }
+                                    { improvedParserError
+                                        | parseStack =
+                                            ( ParserError.BinaryOperator op ParserError.RightHandSide
+                                            , rhsAndMore
+                                            )
+                                                :: parseStack
+                                    }
                                )
                     )
                 |> Result.map
@@ -504,7 +578,13 @@ symbolHelper ({ source, start } as state) =
                     Just
                         { position = start
                         , errorType = ParserError.InvalidChar firstChar
-                        , parseStack = [ ParserError.Symbol ]
+                        , parseStack =
+                            [ ( ParserError.Symbol
+                              , { source = String.fromChar firstChar
+                                , start = start
+                                }
+                              )
+                            ]
                         }
             )
 

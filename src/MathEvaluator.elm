@@ -1,4 +1,4 @@
-module MathEvaluator exposing (EvaluationError, evaluate)
+module MathEvaluator exposing (EvaluationError, evaluate, evaluateWithScope)
 
 import MathExpression exposing (MathExpression)
 
@@ -45,6 +45,52 @@ evaluate getRealFunction expression =
 
         MathExpression.Function function argument ->
             evaluate getRealFunction argument
+                |> Result.map (getRealFunction function)
+
+
+evaluateWithScope : (f -> (Float -> Float)) -> (String -> Maybe Float) -> MathExpression f -> Result EvaluationError Float
+evaluateWithScope getRealFunction scope expression =
+    case expression of
+        MathExpression.BinaryOperation lhs op rhs ->
+            let
+                lhsValue =
+                    evaluateWithScope getRealFunction scope lhs
+
+                opFunc =
+                    evaluateBinaryOperator op
+
+                rhsValue =
+                    evaluateWithScope getRealFunction scope rhs
+            in
+            Result.map2 opFunc lhsValue rhsValue
+
+        MathExpression.UnaryOperation op rhs ->
+            let
+                opFunc =
+                    evaluateUnaryOperator op
+
+                rhsValue =
+                    evaluateWithScope getRealFunction scope rhs
+            in
+            Result.map opFunc rhsValue
+
+        MathExpression.ConjugateTranspose lhs ->
+            evaluateWithScope getRealFunction scope lhs
+
+        MathExpression.Parentheses expr ->
+            evaluateWithScope getRealFunction scope expr
+
+        MathExpression.Symbol symbol ->
+            case scope symbol of
+                Just float ->
+                    Ok float
+
+                Nothing ->
+                    String.toFloat symbol
+                        |> Result.fromMaybe (NonNumericSymbol symbol)
+
+        MathExpression.Function function argument ->
+            evaluateWithScope getRealFunction scope argument
                 |> Result.map (getRealFunction function)
 
 

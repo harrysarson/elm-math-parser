@@ -10,6 +10,7 @@ module ParserError exposing (ErrorType(..), ParseFunction(..), ParserError, Side
 -}
 
 import MathExpression
+import ParserState exposing (ParserState)
 
 
 {-| An error created whilst parsing an expression.
@@ -23,7 +24,7 @@ import MathExpression
 type alias ParserError =
     { position : Int
     , errorType : ErrorType
-    , parseStack : List ParseFunction
+    , parseStack : List ( ParseFunction, ParserState )
     }
 
 
