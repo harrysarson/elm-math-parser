@@ -214,7 +214,7 @@ displayParserResult scope res =
 tmp content =
     let
         parsed =
-            MathParser.expression (always Nothing) content
+            MathParser.expression (.source >> Just) (always Nothing) content
 
         numbers =
             content

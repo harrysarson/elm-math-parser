@@ -12,17 +12,17 @@ module MathToString exposing (stringifyExpression, stringifyBinaryOperator, stri
 import MathExpression exposing (..)
 
 
-stringifyWithParentheses : (f -> String) -> MathExpression f -> String
-stringifyWithParentheses functionToString expression =
+stringifyWithParentheses : (s -> String) -> (f -> String) -> MathExpression s f -> String
+stringifyWithParentheses symbolToString functionToString expression =
     case expression of
         Symbol _ ->
-            stringifyExpression functionToString expression
+            stringifyExpression symbolToString functionToString expression
 
         Function _ _ ->
-            stringifyExpression functionToString expression
+            stringifyExpression symbolToString functionToString expression
 
         _ ->
-            "(" ++ stringifyExpression functionToString expression ++ ")"
+            "(" ++ stringifyExpression symbolToString functionToString expression ++ ")"
 
 
 {-| Display a binary operator in string form.
@@ -60,27 +60,27 @@ stringifyUnaryOperator op =
 
 {-| Display an expression in string form.
 -}
-stringifyExpression : (f -> String) -> MathExpression f -> String
-stringifyExpression functionToString expression =
+stringifyExpression : (s -> String) -> (f -> String) -> MathExpression s f -> String
+stringifyExpression symbolToString functionToString expression =
     case expression of
         BinaryOperation lhs op rhs ->
-            stringifyWithParentheses functionToString lhs
+            stringifyWithParentheses symbolToString functionToString lhs
                 ++ " "
                 ++ stringifyBinaryOperator op
                 ++ " "
-                ++ stringifyWithParentheses functionToString rhs
+                ++ stringifyWithParentheses symbolToString functionToString rhs
 
         UnaryOperation op expr ->
-            stringifyUnaryOperator op ++ stringifyWithParentheses functionToString expr
+            stringifyUnaryOperator op ++ stringifyWithParentheses symbolToString functionToString expr
 
         ConjugateTranspose lhs ->
-            stringifyWithParentheses functionToString lhs ++ "'"
+            stringifyWithParentheses symbolToString functionToString lhs ++ "'"
 
         Parentheses expr ->
-            stringifyWithParentheses functionToString expr
+            stringifyWithParentheses symbolToString functionToString expr
 
         Symbol str ->
-            str
+            symbolToString str
 
         Function f args ->
-            functionToString f ++ "[" ++ stringifyExpression functionToString args ++ "]"
+            functionToString f ++ "[" ++ stringifyExpression symbolToString functionToString args ++ "]"

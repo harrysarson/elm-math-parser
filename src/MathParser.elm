@@ -23,24 +23,24 @@ import Set
 import StateParser
 
 
-type alias ParserResult f =
-    StateParser.ParserResult f
+type alias ParserResult s f =
+    StateParser.ParserResult s f
 
 
 {-| A parser that converts a string into a mathematical expression.
 -}
-type alias MathParser f =
-    String -> Result ParserError (ParserResult f)
+type alias MathParser s f =
+    String -> Result ParserError (ParserResult s f)
 
 
 {-| Parse an expression.
 -}
-expression : (ParserState -> Maybe f) -> MathParser f
-expression parseFunction str =
+expression : (ParserState -> Maybe s) -> (ParserState -> Maybe f) -> MathParser s f
+expression parseString parseFunction str =
     { source = str
     , start = 0
     }
-        |> StateParser.expression parseFunction
+        |> StateParser.expression parseString parseFunction
 
 
 

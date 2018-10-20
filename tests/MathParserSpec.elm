@@ -64,7 +64,7 @@ tests =
                             }
                 in
                 (lhs ++ MathToString.stringifyBinaryOperator op ++ rhs)
-                    |> expression (always Nothing)
+                    |> MathParser.expression (.source >> Just) (always Nothing)
                     |> Expect.equal parseResult
         , fuzz2
             MaFuzz.binaryOperator
@@ -94,7 +94,7 @@ tests =
                     ++ b
                     ++ MathToString.stringifyBinaryOperator op
                     ++ c
-                    |> expression (always Nothing)
+                    |> MathParser.expression (.source >> Just) (always Nothing)
                     |> Result.map .expression
                     |> Expect.equal expectedAst
         , fuzz3
@@ -128,7 +128,7 @@ tests =
                     ++ spaces
                     ++ MathToString.stringifyUnaryOperator unaryOp
                     ++ b
-                    |> expression (always Nothing)
+                    |> MathParser.expression (.source >> Just) (always Nothing)
                     |> Result.map .expression
                     |> Expect.equal expectedAst
         ]

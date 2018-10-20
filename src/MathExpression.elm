@@ -22,13 +22,13 @@ import Set exposing (Set)
 
 {-| A mathematical expression.
 -}
-type MathExpression f
-    = BinaryOperation (MathExpression f) BinaryOperator (MathExpression f)
-    | UnaryOperation UnaryOperator (MathExpression f)
-    | ConjugateTranspose (MathExpression f)
-    | Parentheses (MathExpression f)
-    | Symbol String
-    | Function f (MathExpression f)
+type MathExpression s f
+    = BinaryOperation (MathExpression s f) BinaryOperator (MathExpression s f)
+    | UnaryOperation UnaryOperator (MathExpression s f)
+    | ConjugateTranspose (MathExpression s f)
+    | Parentheses (MathExpression s f)
+    | Symbol s
+    | Function f (MathExpression s f)
 
 
 {-| An operator with a left and right hand side.

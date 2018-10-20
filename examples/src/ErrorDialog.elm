@@ -153,3 +153,6 @@ typeToString error =
 
         ParserError.UndefinedFunction s ->
             ( "", [] )
+
+        ParserError.UndefinedSymbol s ->
+            ( "", [] )

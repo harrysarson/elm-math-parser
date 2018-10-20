@@ -43,21 +43,13 @@ evaluatorTest expression expected =
     <|
         \() ->
             expression
-                |> MathParser.expression (.source >> MathFunction.fromString)
+                |> MathParser.expression (.source >> String.toFloat) (.source >> MathFunction.fromString)
                 |> (\parsedResult ->
                         case parsedResult of
                             Ok parsed ->
                                 parsed.expression
                                     |> MathEvaluator.evaluate MathFunction.toRealFunction
-                                    |> (\evaluatedResult ->
-                                            case evaluatedResult of
-                                                Ok actual ->
-                                                    actual
-                                                        |> Expect.within tolerance expected
-
-                                                Err e ->
-                                                    Expect.fail (Debug.toString e)
-                                       )
+                                    |> Expect.within tolerance expected
 
                             Err e ->
                                 Expect.fail (Debug.toString e)

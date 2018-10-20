@@ -1,27 +1,28 @@
-module MathEvaluator exposing (EvaluationError, evaluate, evaluateWithScope)
+module MathEvaluator exposing (evaluate, evaluateWithScope)
 
 import MathExpression exposing (MathExpression)
 
 
-type EvaluationError
-    = NonNumericSymbol String
-
-
-evaluate : (f -> (Float -> Float)) -> MathExpression f -> Result EvaluationError Float
+evaluate : (f -> (Float -> Float)) -> MathExpression Float f -> Float
 evaluate getRealFunction expression =
+    evaluateWithScope identity getRealFunction expression
+
+
+evaluateWithScope : (s -> Float) -> (f -> (Float -> Float)) -> MathExpression s f -> Float
+evaluateWithScope scope getRealFunction expression =
     case expression of
         MathExpression.BinaryOperation lhs op rhs ->
             let
                 lhsValue =
-                    evaluate getRealFunction lhs
+                    evaluateWithScope scope getRealFunction lhs
 
                 opFunc =
                     evaluateBinaryOperator op
 
                 rhsValue =
-                    evaluate getRealFunction rhs
+                    evaluateWithScope scope getRealFunction rhs
             in
-            Result.map2 opFunc lhsValue rhsValue
+            opFunc lhsValue rhsValue
 
         MathExpression.UnaryOperation op rhs ->
             let
@@ -29,69 +30,22 @@ evaluate getRealFunction expression =
                     evaluateUnaryOperator op
 
                 rhsValue =
-                    evaluate getRealFunction rhs
+                    evaluateWithScope scope getRealFunction rhs
             in
-            Result.map opFunc rhsValue
+            opFunc rhsValue
 
         MathExpression.ConjugateTranspose lhs ->
-            evaluate getRealFunction lhs
+            evaluateWithScope scope getRealFunction lhs
 
         MathExpression.Parentheses expr ->
-            evaluate getRealFunction expr
+            evaluateWithScope scope getRealFunction expr
 
         MathExpression.Symbol symbol ->
-            String.toFloat symbol
-                |> Result.fromMaybe (NonNumericSymbol symbol)
+            scope symbol
 
         MathExpression.Function function argument ->
-            evaluate getRealFunction argument
-                |> Result.map (getRealFunction function)
-
-
-evaluateWithScope : (f -> (Float -> Float)) -> (String -> Maybe Float) -> MathExpression f -> Result EvaluationError Float
-evaluateWithScope getRealFunction scope expression =
-    case expression of
-        MathExpression.BinaryOperation lhs op rhs ->
-            let
-                lhsValue =
-                    evaluateWithScope getRealFunction scope lhs
-
-                opFunc =
-                    evaluateBinaryOperator op
-
-                rhsValue =
-                    evaluateWithScope getRealFunction scope rhs
-            in
-            Result.map2 opFunc lhsValue rhsValue
-
-        MathExpression.UnaryOperation op rhs ->
-            let
-                opFunc =
-                    evaluateUnaryOperator op
-
-                rhsValue =
-                    evaluateWithScope getRealFunction scope rhs
-            in
-            Result.map opFunc rhsValue
-
-        MathExpression.ConjugateTranspose lhs ->
-            evaluateWithScope getRealFunction scope lhs
-
-        MathExpression.Parentheses expr ->
-            evaluateWithScope getRealFunction scope expr
-
-        MathExpression.Symbol symbol ->
-            case scope symbol of
-                Just float ->
-                    Ok float
-
-                Nothing ->
-                    String.toFloat symbol
-                        |> Result.fromMaybe (NonNumericSymbol symbol)
-
-        MathExpression.Function function argument ->
-            evaluateWithScope getRealFunction scope argument
-                |> Result.map (getRealFunction function)
+            evaluateWithScope scope getRealFunction argument
+                |> getRealFunction function
 
 
 evaluateBinaryOperator : MathExpression.BinaryOperator -> Float -> Float -> Float
