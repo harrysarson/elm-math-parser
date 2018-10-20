@@ -150,9 +150,3 @@ typeToString error =
 
         ParserError.MissingClosingParenthesis ->
             ( "", [] )
-
-        ParserError.UndefinedFunction s ->
-            ( "", [] )
-
-        ParserError.UndefinedSymbol s ->
-            ( "", [] )

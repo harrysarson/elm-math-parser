@@ -75,7 +75,7 @@ view : Model -> Html Msg
 view { input, scope } =
     let
         parsed =
-            MathParser.standardExpression input
+            MathParser.expression input
 
         prompt =
             "> "
@@ -176,18 +176,35 @@ view { input, scope } =
                    )
 
 
-displayParserResult : (String -> Maybe String) -> MathParser.ParserResult MathFunction -> List (Element Msg)
+type ExpressionEvaluationError
+    = CannotConvertFloatToInt String
+    | UnrecognisedFunctionName String
+
+
+displayParserResult : (String -> Maybe String) -> MathParser.ParserResult -> List (Element Msg)
 displayParserResult scope res =
     let
         input =
-            MathToString.stringifyExpression MathFunction.toString res.expression
+            MathToString.stringifyExpression res.expression
 
-        floatScope =
-            scope
-                >> Maybe.andThen String.toFloat
+        symbolToFloat s =
+            s
+                |> scope
+                |> Maybe.withDefault s
+                |> String.toFloat
+                |> Result.fromMaybe (CannotConvertFloatToInt s)
+
+        createFunction name =
+            name
+                |> MathFunction.fromString
+                |> Maybe.map MathFunction.toRealFunction
+                |> Result.fromMaybe (UnrecognisedFunctionName name)
 
         output =
-            MathEvaluator.evaluateWithScope MathFunction.toRealFunction floatScope res.expression
+            res.expression
+                |> MathExpression.updateFunctions createFunction
+                |> Result.andThen (MathExpression.updateSymbols symbolToFloat)
+                |> Result.map MathEvaluator.evaluate
                 |> Debug.toString
 
         symbols =
@@ -209,156 +226,3 @@ displayParserResult scope res =
                     [ Font.color Config.textColors.input ]
                     [ Element.text <| input ++ " = " ++ output ]
            ]
-
-
-tmp content =
-    let
-        parsed =
-            MathParser.expression (.source >> Just) (always Nothing) content
-
-        numbers =
-            content
-                |> String.toList
-                |> List.indexedMap always
-                |> List.map (\i -> modBy 10 i)
-                |> List.map String.fromInt
-                |> String.join ""
-
-        error =
-            parsed
-                |> flipResult
-                |> Result.toMaybe
-
-        errorPosition =
-            error
-                |> Maybe.map .position
-
-        errPointer =
-            errorPosition
-                |> Maybe.map
-                    (\p ->
-                        String.repeat p " "
-                            |> String.cons '^'
-                            |> String.reverse
-                            |> String.padRight (String.length content) ' '
-                    )
-    in
-    { title = "Elm Mathematics Parsing"
-    , body =
-        [ div myStyle
-            ([ Just <|
-                input
-                    ([ value content
-                     , id "expression-input"
-                     , onInput NewContent
-                     ]
-                        ++ inputStyle
-                    )
-                    []
-             , errPointer
-                |> Maybe.map
-                    (\pointer ->
-                        input
-                            ([ value pointer ]
-                                ++ inputStyle
-                            )
-                            []
-                    )
-             , error
-                |> Maybe.map .parseStack
-                |> Maybe.map
-                    (always <| span [] [ text "Parser stack" ])
-             , error
-                |> Maybe.map .parseStack
-                |> Maybe.map
-                    (\stack ->
-                        ol [] <| List.map (\fun -> li [] [ text <| Debug.toString fun ]) stack
-                    )
-             , error
-                |> Maybe.map .errorType
-                |> Maybe.map
-                    (\type_ ->
-                        div [] [ text <| "type: " ++ Debug.toString type_ ]
-                    )
-             , Just <| div [] [ text (Debug.toString parsed) ]
-             , parsed
-                |> Result.map (\p -> div [] [ text (MathToString.stringifyExpression MathFunction.toString p.expression) ])
-                |> Result.toMaybe
-             , parsed
-                |> Result.map .symbols
-                |> Result.map
-                    (\symbols ->
-                        table
-                            [ style "border-collapse" "collapse", style "text-align" "center" ]
-                            (tr [ style "border-bottom" "1px solid black" ]
-                                [ td [] [ text "Symbol" ]
-                                , td [] [ text "Index" ]
-                                ]
-                                :: (symbols
-                                        |> List.map
-                                            (\( symbol, index ) ->
-                                                tr [] [ td [] [ text symbol ], td [] [ text <| Debug.toString index ] ]
-                                            )
-                                   )
-                            )
-                    )
-                |> Result.toMaybe
-             , parsed
-                |> Result.toMaybe
-                |> Maybe.map .expression
-                |> Maybe.map (MathEvaluator.evaluate MathFunction.toRealFunction)
-                |> Maybe.map Debug.toString
-                |> Maybe.map
-                    (\s ->
-                        div [] [ text s ]
-                    )
-             ]
-                |> justList
-            )
-        ]
-    }
-
-
-justList : List (Maybe a) -> List a
-justList list =
-    case list of
-        [] ->
-            []
-
-        maybeFirst :: rest ->
-            case maybeFirst of
-                Just first ->
-                    first :: justList rest
-
-                Nothing ->
-                    justList rest
-
-
-myStyle : List (Attribute msg)
-myStyle =
-    [ style "padding" "1em 1em"
-    , style "font-size" "2em"
-    , style "font-family" "monospace, monospace"
-    ]
-
-
-inputStyle : List (Attribute msg)
-inputStyle =
-    [ style "width" "100%"
-    , style "font" "inherit"
-    ]
-
-
-tableStyle : List (Attribute msg)
-tableStyle =
-    [ style "border-collapse" "collapse" ]
-
-
-flipResult : Result value a -> Result a value
-flipResult result =
-    case result of
-        Err err ->
-            Ok err
-
-        Ok val ->
-            Err val

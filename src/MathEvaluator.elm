@@ -1,26 +1,21 @@
-module MathEvaluator exposing (evaluate, evaluateWithScope)
+module MathEvaluator exposing (evaluate)
 
 import MathExpression exposing (MathExpression)
 
 
-evaluate : (f -> (Float -> Float)) -> MathExpression Float f -> Float
-evaluate getRealFunction expression =
-    evaluateWithScope identity getRealFunction expression
-
-
-evaluateWithScope : (s -> Float) -> (f -> (Float -> Float)) -> MathExpression s f -> Float
-evaluateWithScope scope getRealFunction expression =
+evaluate : MathExpression Float (Float -> Float) -> Float
+evaluate expression =
     case expression of
         MathExpression.BinaryOperation lhs op rhs ->
             let
                 lhsValue =
-                    evaluateWithScope scope getRealFunction lhs
+                    evaluate lhs
 
                 opFunc =
                     evaluateBinaryOperator op
 
                 rhsValue =
-                    evaluateWithScope scope getRealFunction rhs
+                    evaluate rhs
             in
             opFunc lhsValue rhsValue
 
@@ -30,22 +25,21 @@ evaluateWithScope scope getRealFunction expression =
                     evaluateUnaryOperator op
 
                 rhsValue =
-                    evaluateWithScope scope getRealFunction rhs
+                    evaluate rhs
             in
             opFunc rhsValue
 
         MathExpression.ConjugateTranspose lhs ->
-            evaluateWithScope scope getRealFunction lhs
+            evaluate lhs
 
         MathExpression.Parentheses expr ->
-            evaluateWithScope scope getRealFunction expr
+            evaluate expr
 
         MathExpression.Symbol symbol ->
-            scope symbol
+            symbol
 
         MathExpression.Function function argument ->
-            evaluateWithScope scope getRealFunction argument
-                |> getRealFunction function
+            function (evaluate argument)
 
 
 evaluateBinaryOperator : MathExpression.BinaryOperator -> Float -> Float -> Float

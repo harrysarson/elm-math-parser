@@ -58,10 +58,11 @@ evaluatorTest expression expected =
                                     parsed.expression
                                         |> MathExpression.updateSymbols (String.toFloat >> Result.fromMaybe InvalidSymbol)
                                         |> Result.andThen (MathExpression.updateFunctions (MathFunction.fromString >> Result.fromMaybe InvalidFunctionName))
+                                        |> Result.map (MathExpression.mapFunctions MathFunction.toRealFunction)
                                 of
                                     Ok expr ->
                                         expr
-                                            |> MathEvaluator.evaluate MathFunction.toRealFunction
+                                            |> MathEvaluator.evaluate
                                             |> Expect.within tolerance expected
 
                                     Err InvalidSymbol ->
