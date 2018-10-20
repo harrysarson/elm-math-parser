@@ -290,6 +290,9 @@ symbolOrFunction =
                     let
                         bodyAndClosing =
                             String.join "]" (rest0 :: rest)
+
+                        parensStart =
+                            start + String.length funcName + 1
                     in
                     if String.endsWith "]" bodyAndClosing then
                         bodyAndClosing
@@ -298,7 +301,7 @@ symbolOrFunction =
                                     let
                                         parenContentState =
                                             { source = parenthesisContent
-                                            , start = start + String.length funcName + 1
+                                            , start = parensStart
                                             }
                                     in
                                     parenContentState
@@ -340,7 +343,7 @@ symbolOrFunction =
                             , parseStack =
                                 [ ( ParserError.Function
                                   , { source = bodyAndClosing
-                                    , start = start + 1
+                                    , start = parensStart
                                     }
                                   )
                                 ]
