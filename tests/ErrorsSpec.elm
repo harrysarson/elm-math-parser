@@ -54,7 +54,7 @@ tests =
 
 
 errorExpect string position errorType =
-    MathParser.expression (.source >> Just) (always Nothing) string
+    MathParser.expression string
         |> Expect.all
             [ Result.mapError .errorType
                 >> Expect.equal (Err errorType)

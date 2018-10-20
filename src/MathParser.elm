@@ -16,31 +16,30 @@ A string expression is converted into an abstract syntax tree.
 
 import Char
 import MaDebug
-import MathFunction exposing (MathFunction)
 import ParserError exposing (ParserError)
 import ParserState exposing (ParserState)
 import Set
 import StateParser
 
 
-type alias ParserResult s f =
-    StateParser.ParserResult s f
+type alias ParserResult =
+    StateParser.ParserResult
 
 
 {-| A parser that converts a string into a mathematical expression.
 -}
-type alias MathParser s f =
-    String -> Result ParserError (ParserResult s f)
+type alias MathParser =
+    String -> Result ParserError ParserResult
 
 
 {-| Parse an expression.
 -}
-expression : (ParserState -> Maybe s) -> (ParserState -> Maybe f) -> MathParser s f
-expression parseString parseFunction str =
+expression : MathParser
+expression str =
     { source = str
     , start = 0
     }
-        |> StateParser.expression parseString parseFunction
+        |> StateParser.expression
 
 
 

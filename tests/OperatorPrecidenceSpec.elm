@@ -42,7 +42,7 @@ makePrecedenceTest withParenthesis =
     <|
         \() ->
             withoutParenthesis
-                |> MathParser.expression (.source >> Just) (always Nothing)
+                |> MathParser.expression
                 |> Result.map .expression
-                |> Result.map (MathToString.stringifyExpression identity <| \_ -> Debug.todo "should not be converting functions")
+                |> Result.map MathToString.stringifyExpression
                 |> Expect.equal (Ok withParenthesis)

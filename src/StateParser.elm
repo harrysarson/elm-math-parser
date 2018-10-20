@@ -9,14 +9,14 @@ import ParserState exposing (ParserState)
 import Set
 
 
-type alias ParserResult s f =
-    { expression : MathExpression s f
+type alias ParserResult =
+    { expression : MathExpression String String
     , symbols : List ( String, Int )
     }
 
 
-type alias StateParser s f =
-    ParserState -> Result ParserError (ParserResult s f)
+type alias StateParser =
+    ParserState -> Result ParserError ParserResult
 
 
 binaryOperatorsDict : List (Dict Char MathExpression.BinaryOperator)
@@ -37,10 +37,10 @@ unaryOperatorsDict =
 
 {-| Parse an expression.
 -}
-expression : (ParserState -> Maybe s) -> (ParserState -> Maybe f) -> StateParser s f
-expression parseSymbol parseFunction state =
+expression : StateParser
+expression state =
     MaDebug.log "MathExpression" state
-        |> expressionHelper parseSymbol parseFunction
+        |> expressionHelper
         |> Result.mapError
             (\({ parseStack } as parserError) ->
                 { parserError
@@ -53,30 +53,30 @@ expression parseSymbol parseFunction state =
             )
 
 
-expressionHelper : (ParserState -> Maybe s) -> (ParserState -> Maybe f) -> StateParser s f
-expressionHelper parseSymbol parseFunction =
+expressionHelper : StateParser
+expressionHelper =
     let
-        parsers : List (StateParser s f -> StateParser s f)
+        parsers : List (StateParser -> StateParser)
         parsers =
             List.map binaryOperators binaryOperatorsDict
                 ++ [ unaryOperators unaryOperatorsDict
                    , congugateTranspose
-                   , parenthesis parseSymbol parseFunction
+                   , parenthesis
                    ]
     in
     ParserState.trimState
         >> List.foldr
             identity
-            (symbolOrFunction parseSymbol parseFunction)
+            symbolOrFunction
             parsers
 
 
-binaryOperators : Dict Char MathExpression.BinaryOperator -> StateParser s f -> StateParser s f
+binaryOperators : Dict Char MathExpression.BinaryOperator -> StateParser -> StateParser
 binaryOperators opDict nextParser =
     checkEmptyState (binaryOperatorsSkipping 0 opDict nextParser)
 
 
-unaryOperators : Dict Char MathExpression.UnaryOperator -> StateParser s f -> StateParser s f
+unaryOperators : Dict Char MathExpression.UnaryOperator -> StateParser -> StateParser
 unaryOperators opCharsDict nextParser =
     checkEmptyState
         (\state ->
@@ -142,7 +142,7 @@ unaryOperators opCharsDict nextParser =
         )
 
 
-congugateTranspose : StateParser s f -> StateParser s f
+congugateTranspose : StateParser -> StateParser
 congugateTranspose nextParser =
     checkEmptyState
         (\state ->
@@ -197,8 +197,8 @@ congugateTranspose nextParser =
         )
 
 
-parenthesis : (ParserState -> Maybe s) -> (ParserState -> Maybe f) -> StateParser s f -> StateParser s f
-parenthesis parseSymbol parseFunction nextParser =
+parenthesis : StateParser -> StateParser
+parenthesis nextParser =
     checkEmptyState
         (\state ->
             let
@@ -219,7 +219,7 @@ parenthesis parseSymbol parseFunction nextParser =
                                                 }
                                         in
                                         parenContentState
-                                            |> expressionHelper parseSymbol parseFunction
+                                            |> expressionHelper
                                             |> Result.mapError
                                                 (\parserError ->
                                                     case parserError.errorType of
@@ -265,37 +265,24 @@ parenthesis parseSymbol parseFunction nextParser =
         )
 
 
-symbol : (ParserState -> Maybe s) -> StateParser s f
-symbol parseSymbol =
+symbol : StateParser
+symbol =
     checkEmptyState
         (\({ source, start } as state) ->
             case symbolHelper (MaDebug.log "Symbol" state) of
                 Nothing ->
-                    case parseSymbol state of
-                        Just parsedSymbol ->
-                            Ok <|
-                                { expression = MathExpression.Symbol parsedSymbol
-                                , symbols = [ ( source, start ) ]
-                                }
-
-                        Nothing ->
-                            Err
-                                { position = start
-                                , errorType = ParserError.UndefinedSymbol state.source
-                                , parseStack =
-                                    [ ( ParserError.Function
-                                      , state
-                                      )
-                                    ]
-                                }
+                    Ok <|
+                        { expression = MathExpression.Symbol source
+                        , symbols = [ ( source, start ) ]
+                        }
 
                 Just error ->
                     Err error
         )
 
 
-symbolOrFunction : (ParserState -> Maybe s) -> (ParserState -> Maybe f) -> StateParser s f
-symbolOrFunction parseSymbol parseFunction =
+symbolOrFunction : StateParser
+symbolOrFunction =
     checkEmptyState
         (\({ source, start } as state) ->
             case String.split "[" source of
@@ -315,7 +302,7 @@ symbolOrFunction parseSymbol parseFunction =
                                             }
                                     in
                                     parenContentState
-                                        |> expressionHelper parseSymbol parseFunction
+                                        |> expressionHelper
                                         |> Result.mapError
                                             (\parserError ->
                                                 case parserError.errorType of
@@ -338,29 +325,11 @@ symbolOrFunction parseSymbol parseFunction =
                                                             :: parseStack
                                                 }
                                             )
-                                        |> Result.andThen
+                                        |> Result.map
                                             (\parseResult ->
-                                                { source = funcName
-                                                , start = start
+                                                { parseResult
+                                                    | expression = MathExpression.Function funcName parseResult.expression
                                                 }
-                                                    |> parseFunction
-                                                    |> Maybe.map
-                                                        (\func ->
-                                                            { parseResult
-                                                                | expression = MathExpression.Function func parseResult.expression
-                                                            }
-                                                        )
-                                                    |> Result.fromMaybe
-                                                        { position = start
-                                                        , errorType = ParserError.UndefinedFunction funcName
-                                                        , parseStack =
-                                                            [ ( ParserError.Function
-                                                              , { source = funcName
-                                                                , start = start
-                                                                }
-                                                              )
-                                                            ]
-                                                        }
                                             )
                                )
 
@@ -378,7 +347,7 @@ symbolOrFunction parseSymbol parseFunction =
                             }
 
                 _ ->
-                    symbol parseSymbol state
+                    symbol state
         )
 
 
@@ -386,7 +355,7 @@ symbolOrFunction parseSymbol parseFunction =
 -- Helper Functions --
 
 
-checkEmptyState : StateParser s f -> StateParser s f
+checkEmptyState : StateParser -> StateParser
 checkEmptyState nextParser ({ source, start } as state) =
     case source of
         "" ->
@@ -400,7 +369,7 @@ checkEmptyState nextParser ({ source, start } as state) =
             nextParser state
 
 
-binaryOperatorsSkipping : Int -> Dict Char MathExpression.BinaryOperator -> StateParser s f -> StateParser s f
+binaryOperatorsSkipping : Int -> Dict Char MathExpression.BinaryOperator -> StateParser -> StateParser
 binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state) =
     let
         opChars =
@@ -465,10 +434,10 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
 binaryOpRhsHelper :
     Int
     -> Dict Char MathExpression.BinaryOperator
-    -> StateParser s f
-    -> ParserResult s f
+    -> StateParser
+    -> ParserResult
     -> MathExpression.BinaryOperator
-    -> StateParser s f
+    -> StateParser
 binaryOpRhsHelper numToSkip opDict nextParser lhs op rhsAndMore =
     case ParserState.splitStateSkipping numToSkip opDict rhsAndMore of
         Just ( nextRhs, nextOp, moreRhs ) ->

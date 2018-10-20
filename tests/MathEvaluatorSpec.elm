@@ -4,8 +4,10 @@ import Expect
 import Fuzz
 import MaFuzz
 import MathEvaluator
+import MathExpression
 import MathFunction
 import MathParser
+import MathToString
 import ParserError
 import String
 import Test exposing (describe, fuzz, fuzz2, fuzz3, test)
@@ -36,6 +38,11 @@ tolerance =
     Expect.AbsoluteOrRelative 1.0e-10 1.0e-10
 
 
+type EvaluatorTestError
+    = InvalidSymbol
+    | InvalidFunctionName
+
+
 evaluatorTest : String -> Float -> Test.Test
 evaluatorTest expression expected =
     test
@@ -43,13 +50,25 @@ evaluatorTest expression expected =
     <|
         \() ->
             expression
-                |> MathParser.expression (.source >> String.toFloat) (.source >> MathFunction.fromString)
+                |> MathParser.expression
                 |> (\parsedResult ->
                         case parsedResult of
                             Ok parsed ->
-                                parsed.expression
-                                    |> MathEvaluator.evaluate MathFunction.toRealFunction
-                                    |> Expect.within tolerance expected
+                                case
+                                    parsed.expression
+                                        |> MathExpression.updateSymbols (String.toFloat >> Result.fromMaybe InvalidSymbol)
+                                        |> Result.andThen (MathExpression.updateFunctions (MathFunction.fromString >> Result.fromMaybe InvalidFunctionName))
+                                of
+                                    Ok expr ->
+                                        expr
+                                            |> MathEvaluator.evaluate MathFunction.toRealFunction
+                                            |> Expect.within tolerance expected
+
+                                    Err InvalidSymbol ->
+                                        Expect.fail (MathToString.stringifyExpression parsed.expression ++ " contains symbols that cannot be converted to floats")
+
+                                    Err InvalidFunctionName ->
+                                        Expect.fail (MathToString.stringifyExpression parsed.expression ++ " contains invalid function names")
 
                             Err e ->
                                 Expect.fail (Debug.toString e)

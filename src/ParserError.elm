@@ -40,8 +40,6 @@ type ErrorType
     | MissingUnaryOperand
     | MissingConjugateTransposeOperand
     | MissingClosingParenthesis
-    | UndefinedFunction String
-    | UndefinedSymbol String
 
 
 {-| Different parser functions used to track the location of a parsing error.

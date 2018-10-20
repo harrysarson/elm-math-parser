@@ -34,18 +34,18 @@ mathToStringTest expression =
     test expression <|
         \() ->
             expression
-                |> MathParser.expression (.source >> Just) (.source >> MathFunction.fromString)
+                |> MathParser.expression
                 |> Result.map
                     (.expression
-                        >> MathToString.stringifyExpression identity MathFunction.toString
+                        >> MathToString.stringifyExpression
                     )
                 |> Expect.all
                     [ Expect.equal (Ok expression)
                     , Result.map
-                        (MathParser.expression (.source >> Just) (.source >> MathFunction.fromString)
+                        (MathParser.expression
                             >> Result.map
                                 (.expression
-                                    >> MathToString.stringifyExpression identity MathFunction.toString
+                                    >> MathToString.stringifyExpression
                                 )
                         )
                         >> Expect.equal (Ok <| Ok expression)
