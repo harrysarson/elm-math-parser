@@ -25,8 +25,12 @@ binaryOperatorsDict =
         |> Dict.insert '-' MathExpression.Subtract
     , Dict.singleton '*' MathExpression.Multiply
         |> Dict.insert '/' MathExpression.Divide
-    , Dict.singleton '^' MathExpression.Exponentiate
     ]
+
+
+exponentialOperatorDict : Dict Char MathExpression.BinaryOperator
+exponentialOperatorDict =
+    Dict.singleton '^' MathExpression.Exponentiate
 
 
 unaryOperatorsDict : Dict Char MathExpression.UnaryOperator
@@ -56,19 +60,14 @@ expression state =
 expressionHelper : StateParser
 expressionHelper =
     let
-        parsers : List (StateParser -> StateParser)
-        parsers =
+        binaryParsers =
             List.map binaryOperators binaryOperatorsDict
-                ++ [ unaryOperators unaryOperatorsDict
-                   , congugateTranspose
-                   , parenthesis
-                   ]
     in
     ParserState.trimState
         >> List.foldr
             identity
-            symbolOrFunction
-            parsers
+            exponentialOperator
+            binaryParsers
 
 
 binaryOperators : Dict Char MathExpression.BinaryOperator -> StateParser -> StateParser
@@ -76,13 +75,91 @@ binaryOperators opDict nextParser =
     checkEmptyState (binaryOperatorsSkipping 0 opDict nextParser)
 
 
-unaryOperators : Dict Char MathExpression.UnaryOperator -> StateParser -> StateParser
-unaryOperators opCharsDict nextParser =
+exponentialOperator : StateParser
+exponentialOperator =
+    checkEmptyState
+        (\state ->
+            case ParserState.splitStateSkipping 0 exponentialOperatorDict (MaDebug.log "^ binary operator" state) of
+                Just ( lhs, MathExpression.Exponentiate, rhs ) ->
+                    let
+                        parsedLhsResult =
+                            lhs
+                                |> ParserState.trimState
+                                |> congugateTranspose
+                                |> Result.mapError
+                                    (\parserError ->
+                                        (case parserError.errorType of
+                                            ParserError.EmptyString ->
+                                                { parserError
+                                                    | errorType = ParserError.MissingBinaryOperand ParserError.LeftHandSide
+                                                    , parseStack = []
+                                                }
+
+                                            _ ->
+                                                parserError
+                                        )
+                                            |> (\({ parseStack } as improvedParserError) ->
+                                                    { improvedParserError
+                                                        | parseStack =
+                                                            ( ParserError.BinaryOperator MathExpression.Exponentiate ParserError.LeftHandSide
+                                                            , lhs
+                                                            )
+                                                                :: parseStack
+                                                    }
+                                               )
+                                    )
+
+                        parsedRhsResult =
+                            rhs
+                                |> ParserState.trimState
+                                |> unaryOperators
+                                |> Result.mapError
+                                    (\parserError ->
+                                        (case parserError.errorType of
+                                            ParserError.EmptyString ->
+                                                { parserError
+                                                    | errorType = ParserError.MissingBinaryOperand ParserError.LeftHandSide
+                                                    , parseStack = []
+                                                }
+
+                                            _ ->
+                                                parserError
+                                        )
+                                            |> (\({ parseStack } as improvedParserError) ->
+                                                    { improvedParserError
+                                                        | parseStack =
+                                                            ( ParserError.BinaryOperator MathExpression.Exponentiate ParserError.LeftHandSide
+                                                            , lhs
+                                                            )
+                                                                :: parseStack
+                                                    }
+                                               )
+                                    )
+                    in
+                    Result.map2
+                        (\parsedLhs parsedRhs ->
+                            { expression = MathExpression.BinaryOperation parsedLhs.expression MathExpression.Exponentiate parsedRhs.expression
+                            , symbols = parsedLhs.symbols ++ parsedRhs.symbols
+                            }
+                        )
+                        parsedLhsResult
+                        parsedRhsResult
+
+                Just _ ->
+                    unaryOperators state
+
+                Nothing ->
+                    unaryOperators state
+        )
+
+
+unaryOperators : StateParser
+unaryOperators =
     checkEmptyState
         (\state ->
             let
                 label =
-                    opCharsDict
+                    unaryOperatorsDict
                         |> Dict.keys
                         |> List.map String.fromChar
                         |> String.join ", "
@@ -93,18 +170,19 @@ unaryOperators opCharsDict nextParser =
             in
             case String.uncons source of
                 Just ( opChar, rhs ) ->
-                    case Dict.get opChar opCharsDict of
+                    case Dict.get opChar unaryOperatorsDict of
                         Just op ->
                             let
                                 rhsState =
-                                    { source = rhs
-                                    , start = start + 1
+                                    { state
+                                        | source = rhs
+                                        , start = start + 1
                                     }
                                         |> ParserState.trimState
 
                                 parsedRhs =
                                     rhsState
-                                        |> nextParser
+                                        |> congugateTranspose
                                         |> Result.mapError
                                             (\parserError ->
                                                 case parserError.errorType of
@@ -135,15 +213,15 @@ unaryOperators opCharsDict nextParser =
                                 parsedRhs
 
                         Nothing ->
-                            nextParser state
+                            congugateTranspose state
 
                 Nothing ->
-                    nextParser state
+                    congugateTranspose state
         )
 
 
-congugateTranspose : StateParser -> StateParser
-congugateTranspose nextParser =
+congugateTranspose : StateParser
+congugateTranspose =
     checkEmptyState
         (\state ->
             let
@@ -157,11 +235,12 @@ congugateTranspose nextParser =
             of
                 Just ( apostrophe, lhsReversed ) ->
                     if apostrophe == '\'' then
-                        { source = String.reverse lhsReversed
-                        , start = start + 1
+                        { state
+                            | source = String.reverse lhsReversed
+                            , start = start + 1
                         }
                             |> ParserState.trimState
-                            |> nextParser
+                            |> parenthesis
                             |> Result.map
                                 (\parseResult ->
                                     { parseResult | expression = MathExpression.ConjugateTranspose parseResult.expression }
@@ -190,15 +269,15 @@ congugateTranspose nextParser =
                                 )
 
                     else
-                        nextParser state
+                        parenthesis state
 
                 Nothing ->
-                    nextParser state
+                    parenthesis state
         )
 
 
-parenthesis : StateParser -> StateParser
-parenthesis nextParser =
+parenthesis : StateParser
+parenthesis =
     checkEmptyState
         (\state ->
             let
@@ -214,8 +293,9 @@ parenthesis nextParser =
                                 |> (\parenthesisContent ->
                                         let
                                             parenContentState =
-                                                { source = parenthesisContent
-                                                , start = start + 1
+                                                { state
+                                                    | source = parenthesisContent
+                                                    , start = start + 1
                                                 }
                                         in
                                         parenContentState
@@ -250,18 +330,19 @@ parenthesis nextParser =
                                 , position = start + String.length source - 1
                                 , parseStack =
                                     [ ( ParserError.Parentheses
-                                      , { source = rest
-                                        , start = start + 1
+                                      , { state
+                                            | source = rest
+                                            , start = start + 1
                                         }
                                       )
                                     ]
                                 }
 
                     else
-                        nextParser state
+                        symbolOrFunction state
 
                 Nothing ->
-                    nextParser state
+                    symbolOrFunction state
         )
 
 
@@ -300,8 +381,9 @@ symbolOrFunction =
                             |> (\parenthesisContent ->
                                     let
                                         parenContentState =
-                                            { source = parenthesisContent
-                                            , start = parensStart
+                                            { state
+                                                | source = parenthesisContent
+                                                , start = parensStart
                                             }
                                     in
                                     parenContentState
@@ -342,8 +424,9 @@ symbolOrFunction =
                             , position = start + String.length source - 1
                             , parseStack =
                                 [ ( ParserError.Function
-                                  , { source = bodyAndClosing
-                                    , start = parensStart
+                                  , { state
+                                        | source = bodyAndClosing
+                                        , start = parensStart
                                     }
                                   )
                                 ]
@@ -359,7 +442,7 @@ symbolOrFunction =
 
 
 checkEmptyState : StateParser -> StateParser
-checkEmptyState nextParser ({ source, start } as state) =
+checkEmptyState parser ({ source, start } as state) =
     case source of
         "" ->
             Err
@@ -369,7 +452,7 @@ checkEmptyState nextParser ({ source, start } as state) =
                 }
 
         _ ->
-            nextParser state
+            parser state
 
 
 binaryOperatorsSkipping : Int -> Dict Char MathExpression.BinaryOperator -> StateParser -> StateParser
@@ -393,24 +476,6 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
                 parsedLhsResult =
                     lhsState
                         |> nextParser
-                        |> (if op == MathExpression.Exponentiate then
-                                Result.andThen
-                                    (\parsed ->
-                                        case parsed.expression of
-                                            MathExpression.UnaryOperation _ _ ->
-                                                Err
-                                                    { position = lhsState.start
-                                                    , errorType = ParserError.ExponentialWithUnaryOperatorLhs
-                                                    , parseStack = []
-                                                    }
-
-                                            _ ->
-                                                Ok parsed
-                                    )
-
-                            else
-                                identity
-                           )
                         |> Result.mapError
                             (\parserError ->
                                 (case parserError.errorType of
@@ -587,8 +652,9 @@ symbolHelper ({ source, start } as state) =
                         , errorType = ParserError.InvalidChar firstChar
                         , parseStack =
                             [ ( ParserError.Symbol
-                              , { source = String.fromChar firstChar
-                                , start = start
+                              , { state
+                                    | source = String.fromChar firstChar
+                                    , start = start
                                 }
                               )
                             ]

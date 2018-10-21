@@ -24,6 +24,7 @@ import Dict exposing (Dict)
 
   - `source`: the string to be parsed.
   - `start`: position of source in the original string input.
+  - `flags`: list of flags to influence the parsing.
 
 -}
 type alias ParserState =
@@ -60,12 +61,14 @@ splitStateSkipping n chars ({ start, source } as state) =
         0
         |> Maybe.map
             (\{ left, splitChar, right, leftSize } ->
-                ( { source = left
-                  , start = start
+                ( { state
+                    | source = left
+                    , start = start
                   }
                 , splitChar
-                , { source = right
-                  , start = start + leftSize + 1
+                , { state
+                    | source = right
+                    , start = start + leftSize + 1
                   }
                 )
             )
@@ -224,26 +227,30 @@ trimStart ({ source, start } as state) =
 
         Just ( ' ', rest ) ->
             trimStart
-                { source = rest
-                , start = start + 1
+                { state
+                    | source = rest
+                    , start = start + 1
                 }
 
         Just ( '\n', rest ) ->
             trimStart
-                { source = rest
-                , start = start + 1
+                { state
+                    | source = rest
+                    , start = start + 1
                 }
 
         Just ( '\u{000D}', rest ) ->
             trimStart
-                { source = rest
-                , start = start + 1
+                { state
+                    | source = rest
+                    , start = start + 1
                 }
 
         Just ( '\t', rest ) ->
             trimStart
-                { source = rest
-                , start = start + 1
+                { state
+                    | source = rest
+                    , start = start + 1
                 }
 
         Just ( first, rest ) ->

@@ -24,6 +24,8 @@ tests =
         , makePrecedenceTest "a + ((3 / (5 ^ 3)) * 8)"
         , makePrecedenceTest "x - (y')"
         , makePrecedenceTest "jkasn / ((65 ^ faifinfinfin)')"
+        , makePrecedenceTest "(-2) ^ x"
+        , makePrecedenceTest "-(2 ^ x)"
         ]
 
 

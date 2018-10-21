@@ -156,15 +156,6 @@ typeToString error =
               ]
             )
 
-        ParserError.MissingUnaryOperand ->
-            ( "", [] )
-
-        ParserError.MissingConjugateTransposeOperand ->
-            ( "", [] )
-
-        ParserError.MissingClosingParenthesis ->
-            ( "", [] )
-
         ParserError.ExponentialWithUnaryOperatorLhs ->
             ( "The exponential operator's left hand side cannot be a unary function"
             , [ E.text "It is confusing if the left hand side of an exponential is a unary operator as it is not clear what the precidence should be."
@@ -178,3 +169,6 @@ typeToString error =
               , E.text "."
               ]
             )
+
+        other ->
+            ( Debug.toString other, [] )

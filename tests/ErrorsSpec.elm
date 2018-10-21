@@ -50,8 +50,18 @@ tests =
             , test "Tranpose operator missing operand" <|
                 \() -> errorExpect "5 * ' + 2" 4 ParserError.MissingConjugateTransposeOperand
             ]
-        , test "Unary operator as left hand side of exponential" <|
-            \() -> errorExpect "-2^x" 0 ParserError.ExponentialWithUnaryOperatorLhs
+        , describe "Ambiguous operator combinations"
+            [ test "Unary operator as left hand side of exponential" <|
+                \() ->
+                    MathParser.expression "-2^x"
+                        |> Result.mapError .position
+                        |> Expect.equal (Err 0)
+            , test "Repeated exponentiation" <|
+                \() ->
+                    MathParser.expression "2 ^ 5 ^ 88"
+                        |> Result.mapError .position
+                        |> Expect.equal (Err 5)
+            ]
         ]
 
 
