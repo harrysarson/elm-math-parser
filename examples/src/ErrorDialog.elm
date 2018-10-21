@@ -3,6 +3,7 @@ module ErrorDialog exposing (view)
 import Config
 import Element as E
 import Element.Background as B
+import Element.Border as Border
 import Element.Font as F
 import Element.Region as R
 import MathToString
@@ -26,6 +27,7 @@ view error =
         , E.spacing 8
         , F.color Config.textColors.error
         , F.size Config.textSize
+        , F.family [ F.typeface "Helvetica" ]
         ]
     <|
         [ E.paragraph
@@ -34,33 +36,34 @@ view error =
             , R.heading 2
             , F.size (Config.textSize * 3 // 2)
             ]
-            [ E.text <| heading ]
+            ((case maybeLastFunc of
+                Just ( lastFunc, state ) ->
+                    [ E.text "Error whilst passing"
+                    , mathSnippet state.source
+                    , E.text ":"
+                    ]
+
+                Nothing ->
+                    []
+             )
+                ++ [ E.text heading ]
+            )
         , E.paragraph
             []
             info
-        , case maybeLastFunc of
-            Just ( lastFunc, state ) ->
-                E.paragraph
-                    []
-                    [ E.text <| "Whilst trying to pass: \"" ++ state.source ++ "\""
-                    ]
-
-            Nothing ->
-                E.paragraph
-                    []
-                    [ E.text "Function stack empty." ]
         , E.table
-            []
+            [ F.family [ F.typeface "monospace" ]
+            ]
             { data = error.parseStack
             , columns =
-                [ { header = E.text "Function"
+                [ { header = E.el [ F.bold ] (E.text "Function")
                   , width = E.fillPortion 1
                   , view =
                         Tuple.first
                             >> Debug.toString
                             >> E.text
                   }
-                , { header = E.text "Source"
+                , { header = E.el [ F.bold ] (E.text "Source")
                   , width = E.fillPortion 5
                   , view =
                         Tuple.second
@@ -76,7 +79,7 @@ view error =
                                )
                             >> E.text
                   }
-                , { header = E.text "Position"
+                , { header = E.el [ F.bold ] (E.text "Position")
                   , width = E.fillPortion 5
                   , view =
                         Tuple.second
@@ -86,11 +89,22 @@ view error =
                   }
                 ]
             }
-        , E.text "----"
+        , E.text ""
         , E.paragraph
             []
             [ E.text <| Debug.toString error ]
         ]
+
+
+mathSnippet : String -> E.Element msg
+mathSnippet text =
+    E.el
+        [ B.color (E.rgba 1 1 1 1)
+        , Border.rounded 1
+        , E.paddingXY 5 0
+        , F.family [ F.monospace ]
+        ]
+        (E.text text)
 
 
 typeToString : ParserError -> ( String, List (E.Element msg) )
@@ -150,3 +164,17 @@ typeToString error =
 
         ParserError.MissingClosingParenthesis ->
             ( "", [] )
+
+        ParserError.ExponentialWithUnaryOperatorLhs ->
+            ( "The exponential operator's left hand side cannot be a unary function"
+            , [ E.text "It is confusing if the left hand side of an exponential is a unary operator as it is not clear what the precidence should be."
+              , E.text "Add brackets to clarify your intention."
+              , E.text "Instead of"
+              , mathSnippet "-2^x"
+              , E.text " use either"
+              , mathSnippet "(-2)^x"
+              , E.text " or"
+              , mathSnippet "-(2^x)"
+              , E.text "."
+              ]
+            )

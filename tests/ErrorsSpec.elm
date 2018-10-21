@@ -50,6 +50,8 @@ tests =
             , test "Tranpose operator missing operand" <|
                 \() -> errorExpect "5 * ' + 2" 4 ParserError.MissingConjugateTransposeOperand
             ]
+        , test "Unary operator as left hand side of exponential" <|
+            \() -> errorExpect "-2^x" 0 ParserError.ExponentialWithUnaryOperatorLhs
         ]
 
 

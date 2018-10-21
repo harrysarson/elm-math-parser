@@ -40,6 +40,7 @@ type ErrorType
     | MissingUnaryOperand
     | MissingConjugateTransposeOperand
     | MissingClosingParenthesis
+    | ExponentialWithUnaryOperatorLhs
 
 
 {-| Different parser functions used to track the location of a parsing error.

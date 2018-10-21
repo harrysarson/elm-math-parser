@@ -387,10 +387,30 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
     case ParserState.splitStateSkipping numToSkip opDict (MaDebug.log label state) of
         Just ( lhs, op, rhsAndMore ) ->
             let
+                lhsState =
+                    ParserState.trimState lhs
+
                 parsedLhsResult =
-                    lhs
-                        |> ParserState.trimState
+                    lhsState
                         |> nextParser
+                        |> (if op == MathExpression.Exponentiate then
+                                Result.andThen
+                                    (\parsed ->
+                                        case parsed.expression of
+                                            MathExpression.UnaryOperation _ _ ->
+                                                Err
+                                                    { position = lhsState.start
+                                                    , errorType = ParserError.ExponentialWithUnaryOperatorLhs
+                                                    , parseStack = []
+                                                    }
+
+                                            _ ->
+                                                Ok parsed
+                                    )
+
+                            else
+                                identity
+                           )
                         |> Result.mapError
                             (\parserError ->
                                 (case parserError.errorType of

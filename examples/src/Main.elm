@@ -83,7 +83,6 @@ view { input, scope } =
     Element.layout
         [ Background.color Config.backgroundColors.stage
         , Font.color Config.textColors.output
-        , Font.italic
         , Font.size (Config.textSize * 2)
         , Font.family [ Font.monospace ]
         ]
