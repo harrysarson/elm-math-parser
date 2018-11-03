@@ -1,4 +1,4 @@
-module Demo exposing (main)
+port module Main exposing (main)
 
 import Browser
 import Browser.Dom as Dom
@@ -29,11 +29,13 @@ type alias Model =
     }
 
 
-initialModel : Model
-initialModel =
-    { input = "4 + 8 *"
-    , scope = Dict.empty
-    }
+initialModel : String -> (Model, Cmd never)
+initialModel input =
+    ( { input = input
+      , scope = Dict.empty
+      }
+    , Cmd.none
+    )
 
 
 type Msg
@@ -41,37 +43,43 @@ type Msg
     | ScopeChanged String String
 
 
-main : Program () Model Msg
+main : Program String Model Msg
 main =
-    Browser.sandbox
+    Browser.document
         { init = initialModel
         , view = view
         , update = update
+        , subscriptions = always Sub.none
         }
 
+port saveInput : String -> Cmd never
 
 
 -- UPDATE
 
 
-update : Msg -> Model -> Model
+update : Msg -> Model -> (Model, Cmd never)
 update msg model =
     case msg of
         NewContent content ->
-            { model | input = content }
+            ( { model | input = content }
+            , saveInput content
+            )
 
         ScopeChanged symbol value ->
-            { model
+            ({ model
                 | scope =
                     model.scope |> Dict.insert symbol value
             }
+            , Cmd.none
+            )
 
 
 
 -- VIEW
 
 
-view : Model -> Html Msg
+view : Model -> Browser.Document Msg
 view { input, scope } =
     let
         parsed =
@@ -80,7 +88,8 @@ view { input, scope } =
         prompt =
             "> "
     in
-    Element.layout
+    { title = "Parse Maths"
+    , body = [ Element.layout
         [ Background.color Config.backgroundColors.stage
         , Font.color Config.textColors.output
         , Font.size (Config.textSize * 2)
@@ -173,6 +182,8 @@ view { input, scope } =
                         Err err ->
                             [ ErrorDialog.view err ]
                    )
+    ]
+    }
 
 
 type ExpressionEvaluationError

@@ -156,19 +156,19 @@ typeToString error =
               ]
             )
 
-        ParserError.ExponentialWithUnaryOperatorLhs ->
-            ( "The exponential operator's left hand side cannot be a unary function"
-            , [ E.text "It is confusing if the left hand side of an exponential is a unary operator as it is not clear what the precidence should be."
-              , E.text "Add brackets to clarify your intention."
-              , E.text "Instead of"
-              , mathSnippet "-2^x"
-              , E.text " use either"
-              , mathSnippet "(-2)^x"
-              , E.text " or"
-              , mathSnippet "-(2^x)"
-              , E.text "."
-              ]
-            )
+        -- ParserError.ExponentialWithUnaryOperatorLhs ->
+        --     ( "The exponential operator's left hand side cannot be a unary function"
+        --     , [ E.text "It is confusing if the left hand side of an exponential is a unary operator as it is not clear what the precidence should be."
+        --       , E.text "Add brackets to clarify your intention."
+        --       , E.text "Instead of"
+        --       , mathSnippet "-2^x"
+        --       , E.text " use either"
+        --       , mathSnippet "(-2)^x"
+        --       , E.text " or"
+        --       , mathSnippet "-(2^x)"
+        --       , E.text "."
+        --       ]
+        --     )
 
         other ->
             ( Debug.toString other, [] )
