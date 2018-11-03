@@ -358,7 +358,10 @@ symbol =
                         }
 
                 Just error ->
-                    Err error
+                    Err
+                        { error
+                        | parseStack = [ ( ParserError.Symbol, state) ]
+                        }
         )
 
 
@@ -650,14 +653,7 @@ symbolHelper ({ source, start } as state) =
                     Just
                         { position = start
                         , errorType = ParserError.InvalidChar firstChar
-                        , parseStack =
-                            [ ( ParserError.Symbol
-                              , { state
-                                    | source = String.fromChar firstChar
-                                    , start = start
-                                }
-                              )
-                            ]
+                        , parseStack = []
                         }
             )
 
