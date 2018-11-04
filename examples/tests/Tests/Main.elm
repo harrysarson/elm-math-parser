@@ -1,8 +1,8 @@
 module Tests.Main exposing (tests)
 
+import Expect
 import Main
 import Test exposing (describe, test)
-import Expect
 
 
 tests : Test.Test

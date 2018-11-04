@@ -10,10 +10,10 @@
     <script>
         const savedInput = localStorage.getItem('input');
         const app = Elm.Main.init({
-            flags: savedInput !== null ? savedInput : "6 + 7 / 5",
+            flags: JSON.parse(localStorage.getItem('saved')),
         });
-        app.ports.saveInput.subscribe(function (input) {
-            localStorage.setItem('input', input);
+        app.ports.save.subscribe(function (json) {
+            localStorage.setItem('saved', JSON.stringify(json));
         });
     </script>
 </body>

@@ -14,6 +14,8 @@ import ErrorDialog
 import Html exposing (Attribute, Html, div, input, li, ol, span, table, td, text, tr)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
+import Json.Decode as Decode
+import Json.Encode as Encode
 import MathEvaluator
 import MathExpression
 import MathFunction exposing (MathFunction)
@@ -29,10 +31,19 @@ type alias Model =
     }
 
 
-initialModel : String -> (Model, Cmd never)
-initialModel input =
+initialModel : Decode.Value -> ( Model, Cmd never )
+initialModel flags =
+    let
+        input =
+            Decode.decodeValue (Decode.field "input" Decode.string) flags
+                |> Result.withDefault "7 + 2 / sqrt[x]"
+
+        scope =
+            Decode.decodeValue (Decode.field "scope" <| Decode.dict Decode.string) flags
+                |> Result.withDefault (Dict.singleton "x" "4")
+    in
     ( { input = input
-      , scope = Dict.empty
+      , scope = scope
       }
     , Cmd.none
     )
@@ -43,7 +54,7 @@ type Msg
     | ScopeChanged String String
 
 
-main : Program String Model Msg
+main : Program Decode.Value Model Msg
 main =
     Browser.document
         { init = initialModel
@@ -52,27 +63,32 @@ main =
         , subscriptions = always Sub.none
         }
 
-port saveInput : String -> Cmd never
+
+port save : Encode.Value -> Cmd never
+
 
 
 -- UPDATE
 
 
-update : Msg -> Model -> (Model, Cmd never)
+update : Msg -> Model -> ( Model, Cmd never )
 update msg model =
-    case msg of
-        NewContent content ->
-            ( { model | input = content }
-            , saveInput content
-            )
+    let
+        newModel =
+            case msg of
+                NewContent content ->
+                    { model | input = content }
 
-        ScopeChanged symbol value ->
-            ({ model
-                | scope =
-                    model.scope |> Dict.insert symbol value
-            }
-            , Cmd.none
-            )
+                ScopeChanged symbol value ->
+                    { model
+                        | scope =
+                            model.scope |> Dict.insert symbol value
+                    }
+    in
+    ( newModel
+    , encodeModel newModel
+        |> save
+    )
 
 
 
@@ -89,100 +105,101 @@ view { input, scope } =
             "> "
     in
     { title = "Parse Maths"
-    , body = [ Element.layout
-        [ Background.color Config.backgroundColors.stage
-        , Font.color Config.textColors.output
-        , Font.size (Config.textSize * 2)
-        , Font.family [ Font.monospace ]
-        ]
-    <|
-        Element.column
-            [ Element.width Element.fill
-            , Element.height Element.shrink
-            , Element.centerX
-            , Element.spacing 36
-            , Element.paddingXY 0 36
+    , body =
+        [ Element.layout
+            [ Background.color Config.backgroundColors.stage
+            , Font.color Config.textColors.output
+            , Font.size (Config.textSize * 2)
+            , Font.family [ Font.monospace ]
             ]
-        <|
-            [ Element.el
-                [ Region.heading 1
-                , Element.paddingXY Config.outputPaddingX 0
-                ]
-              <|
-                Element.text "Enter a mathematical expression"
-            , Element.column
+          <|
+            Element.column
                 [ Element.width Element.fill
-                , Font.color Config.textColors.input
+                , Element.height Element.shrink
+                , Element.centerX
+                , Element.spacing 36
+                , Element.paddingXY 0 36
                 ]
-              <|
-                Input.text
-                    [ Element.alignLeft
+            <|
+                [ Element.el
+                    [ Region.heading 1
                     , Element.paddingXY Config.outputPaddingX 0
-                    , Element.spacing 0
-                    , Element.focused
-                        [ Border.glow (Element.rgba 0 1 0 1) 0 ]
-                    , Border.width 0
-                    , Border.rounded 0
-                    , Input.focusedOnLoad
                     ]
-                    { onChange = NewContent
-                    , text = input
-                    , placeholder = Nothing
-                    , label =
-                        Input.labelLeft
-                            [ Background.color Config.backgroundColors.input ]
-                            (Element.text prompt)
-                    }
-                    :: (case parsed of
-                            Ok _ ->
-                                []
+                  <|
+                    Element.text "Enter a mathematical expression"
+                , Element.column
+                    [ Element.width Element.fill
+                    , Font.color Config.textColors.input
+                    ]
+                  <|
+                    Input.text
+                        [ Element.alignLeft
+                        , Element.paddingXY Config.outputPaddingX 0
+                        , Element.spacing 0
+                        , Element.focused
+                            [ Border.glow (Element.rgba 0 1 0 1) 0 ]
+                        , Border.width 0
+                        , Border.rounded 0
+                        , Input.focusedOnLoad
+                        ]
+                        { onChange = NewContent
+                        , text = input
+                        , placeholder = Nothing
+                        , label =
+                            Input.labelLeft
+                                [ Background.color Config.backgroundColors.input ]
+                                (Element.text prompt)
+                        }
+                        :: (case parsed of
+                                Ok _ ->
+                                    []
+
+                                Err err ->
+                                    let
+                                        nonBreakingSpace =
+                                            "\u{00A0}"
+
+                                        promptAsSpaces =
+                                            String.repeat (String.length prompt) nonBreakingSpace
+
+                                        pointerText =
+                                            err.position
+                                                |> (\p -> String.repeat p nonBreakingSpace)
+                                                |> String.cons '^'
+                                                |> String.reverse
+                                                |> String.padRight (String.length input) ' '
+                                    in
+                                    [ Element.el
+                                        []
+                                        (Element.text promptAsSpaces)
+                                    , Element.el
+                                        [ Element.width Element.fill
+                                        , Element.paddingXY Config.outputPaddingX 0
+                                        ]
+                                        (Element.text pointerText)
+                                    ]
+                                        |> Element.row
+                                            [ Element.alignLeft
+                                            , Element.paddingXY Config.outputPaddingX 0
+                                            , Element.width Element.fill
+                                            , Font.color Config.backgroundColors.input
+                                            , Element.padding 0
+                                            ]
+                                        |> List.singleton
+                           )
+                ]
+                    ++ (case parsed of
+                            Ok res ->
+                                displayParserResult
+                                    (\symbol ->
+                                        Dict.get symbol scope
+                                    )
+                                    res
 
                             Err err ->
-                                let
-                                    nonBreakingSpace =
-                                        "\u{00A0}"
-
-                                    promptAsSpaces =
-                                        String.repeat (String.length prompt) nonBreakingSpace
-
-                                    pointerText =
-                                        err.position
-                                            |> (\p -> String.repeat p nonBreakingSpace)
-                                            |> String.cons '^'
-                                            |> String.reverse
-                                            |> String.padRight (String.length input) ' '
-                                in
-                                [ Element.el
-                                    []
-                                    (Element.text promptAsSpaces)
-                                , Element.el
-                                    [ Element.width Element.fill
-                                    , Element.paddingXY Config.outputPaddingX 0
-                                    ]
-                                    (Element.text pointerText)
-                                ]
-                                    |> Element.row
-                                        [ Element.alignLeft
-                                        , Element.paddingXY Config.outputPaddingX 0
-                                        , Element.width Element.fill
-                                        , Font.color Config.backgroundColors.input
-                                        , Element.padding 0
-                                        ]
-                                    |> List.singleton
+                                [ ErrorDialog.view err ]
                        )
-            ]
-                ++ (case parsed of
-                        Ok res ->
-                            displayParserResult
-                                (\symbol ->
-                                    Dict.get symbol scope
-                                )
-                                res
-
-                        Err err ->
-                            [ ErrorDialog.view err ]
-                   )
-    ]
+        ]
     }
 
 
@@ -236,3 +253,14 @@ displayParserResult scope res =
                     [ Font.color Config.textColors.input ]
                     [ Element.text <| input ++ " = " ++ output ]
            ]
+
+
+encodeModel : Model -> Encode.Value
+encodeModel model =
+    Encode.object
+        [ ( "input", Encode.string model.input )
+        , ( "scope"
+          , model.scope
+                |> Encode.dict identity Encode.string
+          )
+        ]

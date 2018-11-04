@@ -8,10 +8,9 @@
     "pre-commit": "1.2.2"
   },
   "scripts": {
-    "test": "elm-test && npm run test:examples",
-    "test:examples": "cd examples && elm-test",
+    "test": "elm-test && cd examples && elm-test",
     "lint": "elm-format src/ tests/ examples/ --validate",
-    "examples": "cd examples && elm-live src/Main.elm --open --start-page=index.html -- --output=built/elm.js"
+    "examples": "cd examples && elm-live src/Main.elm --start-page=index.html -- --output=built/elm.js"
   },
   "pre-commit": [
     "lint",

@@ -169,6 +169,5 @@ typeToString error =
         --       , E.text "."
         --       ]
         --     )
-
         other ->
             ( Debug.toString other, [] )
