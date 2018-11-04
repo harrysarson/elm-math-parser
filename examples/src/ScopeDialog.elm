@@ -15,7 +15,6 @@ view scope symbols tagger =
     let
         definitionBoxes =
             symbols
-                |> List.filter (\s -> String.toFloat s == Nothing)
                 |> List.map (definitionBox scope tagger)
     in
     if List.isEmpty definitionBoxes then
@@ -23,7 +22,7 @@ view scope symbols tagger =
 
     else
         E.paragraph
-            []
+            [ E.padding 10 ]
             [ E.text "Define Variables" ]
             :: definitionBoxes
 

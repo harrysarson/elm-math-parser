@@ -2,8 +2,8 @@ module ErrorsSpec exposing (tests)
 
 import Expect
 import Fuzz
-import MaFuzz
 import MathExpression exposing (MathExpression)
+import MathFuzz
 import MathParser exposing (expression)
 import MathToString
 import ParserError

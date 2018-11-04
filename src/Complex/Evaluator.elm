@@ -1,9 +1,10 @@
-module MathEvaluator exposing (evaluate)
+module Complex.Evaluator exposing (evaluate)
 
+import Complex exposing (Complex)
 import MathExpression exposing (MathExpression)
 
 
-evaluate : MathExpression Float (Float -> Float) -> Float
+evaluate : MathExpression Complex (Complex -> Complex) -> Complex
 evaluate expression =
     case expression of
         MathExpression.BinaryOperation lhs op rhs ->
@@ -30,7 +31,7 @@ evaluate expression =
             opFunc rhsValue
 
         MathExpression.ConjugateTranspose lhs ->
-            evaluate lhs
+            Complex.conjugate (evaluate lhs)
 
         MathExpression.Parentheses expr ->
             evaluate expr
@@ -42,30 +43,30 @@ evaluate expression =
             function (evaluate argument)
 
 
-evaluateBinaryOperator : MathExpression.BinaryOperator -> Float -> Float -> Float
+evaluateBinaryOperator : MathExpression.BinaryOperator -> Complex -> Complex -> Complex
 evaluateBinaryOperator op =
     case op of
         MathExpression.Add ->
-            (+)
+            Complex.add
 
         MathExpression.Subtract ->
-            (-)
+            Complex.subtract
 
         MathExpression.Multiply ->
-            (*)
+            Complex.multiply
 
         MathExpression.Divide ->
-            (/)
+            Complex.divide
 
         MathExpression.Exponentiate ->
-            (^)
+            Complex.pow
 
 
-evaluateUnaryOperator : MathExpression.UnaryOperator -> Float -> Float
+evaluateUnaryOperator : MathExpression.UnaryOperator -> Complex -> Complex
 evaluateUnaryOperator op =
     case op of
         MathExpression.UnaryAdd ->
             identity
 
         MathExpression.UnarySubtract ->
-            (-) 0
+            Complex.subtract Complex.zero

@@ -2,8 +2,8 @@ module MathParserSpec exposing (tests)
 
 import Expect
 import Fuzz
-import MaFuzz
 import MathExpression exposing (MathExpression)
+import MathFuzz
 import MathParser exposing (expression)
 import MathToString
 import ParserError
@@ -16,9 +16,9 @@ tests =
     describe "Parse mathematical expressions"
         [ fuzz
             (Fuzz.tuple3
-                ( MaFuzz.addSpaces MaFuzz.symbol
-                , MaFuzz.binaryOperator
-                , MaFuzz.addSpaces MaFuzz.symbol
+                ( MathFuzz.addSpaces MathFuzz.symbol
+                , MathFuzz.binaryOperator
+                , MathFuzz.addSpaces MathFuzz.symbol
                 )
             )
             "Parse binary operators"
@@ -67,11 +67,11 @@ tests =
                     |> MathParser.expression
                     |> Expect.equal parseResult
         , fuzz2
-            MaFuzz.binaryOperator
+            MathFuzz.binaryOperator
             (Fuzz.tuple3
-                ( MaFuzz.addSpaces MaFuzz.symbol
-                , MaFuzz.addSpaces MaFuzz.symbol
-                , MaFuzz.addSpaces MaFuzz.symbol
+                ( MathFuzz.addSpaces MathFuzz.symbol
+                , MathFuzz.addSpaces MathFuzz.symbol
+                , MathFuzz.addSpaces MathFuzz.symbol
                 )
             )
             "Parse binary operators with left associativity"
@@ -99,14 +99,14 @@ tests =
                     |> Expect.equal expectedAst
         , fuzz3
             (Fuzz.tuple
-                ( MaFuzz.addSpaces MaFuzz.symbol
-                , MaFuzz.binaryOperator
+                ( MathFuzz.addSpaces MathFuzz.symbol
+                , MathFuzz.binaryOperator
                 )
             )
-            MaFuzz.spaces
+            MathFuzz.spaces
             (Fuzz.tuple
-                ( MaFuzz.unaryOperator
-                , MaFuzz.addSpaces MaFuzz.symbol
+                ( MathFuzz.unaryOperator
+                , MathFuzz.addSpaces MathFuzz.symbol
                 )
             )
             "Parse unary operators with higher precedence than binary operators"

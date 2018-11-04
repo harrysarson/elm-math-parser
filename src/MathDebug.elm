@@ -1,4 +1,4 @@
-module MaDebug exposing (log)
+module MathDebug exposing (log)
 
 {-| Allows logging to be enabled/disabled.
 

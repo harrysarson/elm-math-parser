@@ -14,11 +14,8 @@ A string expression is converted into an abstract syntax tree.
 
 -}
 
-import Char
-import MaDebug
 import ParserError exposing (ParserError)
 import ParserState exposing (ParserState)
-import Set
 import StateParser
 
 

@@ -2,7 +2,7 @@ module StateParser exposing (ParserResult, StateParser, expression)
 
 import Char
 import Dict exposing (Dict)
-import MaDebug
+import MathDebug
 import MathExpression exposing (MathExpression)
 import ParserError exposing (ParserError)
 import ParserState exposing (ParserState)
@@ -43,7 +43,7 @@ unaryOperatorsDict =
 -}
 expression : StateParser
 expression state =
-    MaDebug.log "MathExpression" state
+    MathDebug.log "MathExpression" state
         |> expressionHelper
         |> Result.mapError
             (\({ parseStack } as parserError) ->
@@ -79,7 +79,7 @@ exponentialOperator : StateParser
 exponentialOperator =
     checkEmptyState
         (\state ->
-            case ParserState.splitStateSkipping 0 exponentialOperatorDict (MaDebug.log "^ binary operator" state) of
+            case ParserState.splitStateSkipping 0 exponentialOperatorDict (MathDebug.log "^ binary operator" state) of
                 Just ( lhs, MathExpression.Exponentiate, rhs ) ->
                     let
                         parsedLhsResult =
@@ -166,7 +166,7 @@ unaryOperators =
                         |> String.append "UnaryOperators "
 
                 { source, start } =
-                    MaDebug.log label state
+                    MathDebug.log label state
             in
             case String.uncons source of
                 Just ( opChar, rhs ) ->
@@ -226,7 +226,7 @@ congugateTranspose =
         (\state ->
             let
                 { source, start } =
-                    MaDebug.log "congugateTranspose" state
+                    MathDebug.log "congugateTranspose" state
             in
             case
                 source
@@ -282,7 +282,7 @@ parenthesis =
         (\state ->
             let
                 { source, start } =
-                    MaDebug.log "Parenthesis" state
+                    MathDebug.log "Parenthesis" state
             in
             case String.uncons source of
                 Just ( possiblyOpenParenthesis, rest ) ->
@@ -350,7 +350,7 @@ symbol : StateParser
 symbol =
     checkEmptyState
         (\({ source, start } as state) ->
-            case symbolHelper (MaDebug.log "Symbol" state) of
+            case symbolHelper (MathDebug.log "Symbol" state) of
                 Nothing ->
                     Ok <|
                         { expression = MathExpression.Symbol source
@@ -360,7 +360,7 @@ symbol =
                 Just error ->
                     Err
                         { error
-                        | parseStack = [ ( ParserError.Symbol, state) ]
+                            | parseStack = [ ( ParserError.Symbol, state ) ]
                         }
         )
 
@@ -470,7 +470,7 @@ binaryOperatorsSkipping numToSkip opDict nextParser ({ source, start } as state)
                 |> String.join ", "
                 |> String.append ("BinaryOperators (skipping " ++ String.fromInt numToSkip ++ ") ")
     in
-    case ParserState.splitStateSkipping numToSkip opDict (MaDebug.log label state) of
+    case ParserState.splitStateSkipping numToSkip opDict (MathDebug.log label state) of
         Just ( lhs, op, rhsAndMore ) ->
             let
                 lhsState =

@@ -4,7 +4,7 @@ import Char
 import Dict
 import Expect
 import Fuzz
-import MaFuzz
+import MathFuzz
 import ParserState exposing (..)
 import String
 import Test exposing (describe, fuzz, fuzz2, test)
@@ -82,7 +82,7 @@ tests =
                                   }
                                 )
                             )
-            , fuzz2 fuzzNonParenthesisChar MaFuzz.parseState "splitting on first character" <|
+            , fuzz2 fuzzNonParenthesisChar MathFuzz.parseState "splitting on first character" <|
                 \firstChar ({ source, start } as state) ->
                     let
                         listOfAscii =
@@ -124,7 +124,7 @@ tests =
                             )
             ]
         , describe "trim state"
-            [ fuzz MaFuzz.parseState "agrees with String.trim" <|
+            [ fuzz MathFuzz.parseState "agrees with String.trim" <|
                 \({ source } as state) ->
                     state
                         |> trimState

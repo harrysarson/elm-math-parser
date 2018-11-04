@@ -1,14 +1,14 @@
-module MathEvaluatorSpec exposing (tests)
+module Real.EvaluatorSpec exposing (tests)
 
 import Expect
 import Fuzz
-import MaFuzz
-import MathEvaluator
 import MathExpression
-import MathFunction
+import MathFuzz
 import MathParser
 import MathToString
 import ParserError
+import Real.Evaluator
+import Real.Function
 import String
 import Test exposing (describe, fuzz, fuzz2, fuzz3, test)
 
@@ -57,12 +57,12 @@ evaluatorTest expression expected =
                                 case
                                     parsed.expression
                                         |> MathExpression.updateSymbols (String.toFloat >> Result.fromMaybe InvalidSymbol)
-                                        |> Result.andThen (MathExpression.updateFunctions (MathFunction.fromString >> Result.fromMaybe InvalidFunctionName))
-                                        |> Result.map (MathExpression.mapFunctions MathFunction.toRealFunction)
+                                        |> Result.andThen (MathExpression.updateFunctions (Real.Function.fromString >> Result.fromMaybe InvalidFunctionName))
+                                        |> Result.map (MathExpression.mapFunctions Real.Function.toFunction)
                                 of
                                     Ok expr ->
                                         expr
-                                            |> MathEvaluator.evaluate
+                                            |> Real.Evaluator.evaluate
                                             |> Expect.within tolerance expected
 
                                     Err InvalidSymbol ->

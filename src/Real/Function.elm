@@ -1,4 +1,4 @@
-module MathFunction exposing (MathFunction(..), fromString, toRealFunction, toString)
+module Real.Function exposing (Function(..), fromString, toFunction, toString)
 
 {-| Basic functions to use with expressions.
 
@@ -10,7 +10,7 @@ module MathFunction exposing (MathFunction(..), fromString, toRealFunction, toSt
 
 {-| A basic function.
 -}
-type MathFunction
+type Function
     = NaturalLogarithm
     | SquareRoot
       -- Trigonometric
@@ -22,7 +22,7 @@ type MathFunction
     | ArcTangent
 
 
-fromString : String -> Maybe MathFunction
+fromString : String -> Maybe Function
 fromString name =
     case name of
         "log" ->
@@ -53,7 +53,7 @@ fromString name =
             Nothing
 
 
-toString : MathFunction -> String
+toString : Function -> String
 toString func =
     case func of
         NaturalLogarithm ->
@@ -81,8 +81,8 @@ toString func =
             "atan"
 
 
-toRealFunction : MathFunction -> (Float -> Float)
-toRealFunction func =
+toFunction : Function -> (Float -> Float)
+toFunction func =
     case func of
         NaturalLogarithm ->
             logBase e

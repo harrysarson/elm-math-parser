@@ -1,12 +1,12 @@
-module MaFuzz exposing (addSpaces, binaryOperator, mathFunction, parseState, spaces, symbol, unaryOperator)
+module MathFuzz exposing (addSpaces, binaryOperator, parseState, realFunction, spaces, symbol, unaryOperator)
 
 import Char
 import Fuzz exposing (Fuzzer)
 import MathExpression
-import MathFunction exposing (MathFunction)
 import ParserState exposing (ParserState)
 import Random exposing (Generator)
 import Random.Extra
+import Real.Function exposing (Function)
 import Set
 
 
@@ -66,16 +66,16 @@ unaryOperator =
         |> Fuzz.oneOf
 
 
-mathFunction : Fuzzer MathFunction
-mathFunction =
-    [ MathFunction.NaturalLogarithm
-    , MathFunction.SquareRoot
-    , MathFunction.Sine
-    , MathFunction.Cosine
-    , MathFunction.Tangent
-    , MathFunction.ArcSine
-    , MathFunction.ArcCosine
-    , MathFunction.ArcTangent
+realFunction : Fuzzer Function
+realFunction =
+    [ Real.Function.NaturalLogarithm
+    , Real.Function.SquareRoot
+    , Real.Function.Sine
+    , Real.Function.Cosine
+    , Real.Function.Tangent
+    , Real.Function.ArcSine
+    , Real.Function.ArcCosine
+    , Real.Function.ArcTangent
     ]
         |> List.map Fuzz.constant
         |> Fuzz.oneOf

@@ -9,7 +9,8 @@
   },
   "scripts": {
     "test": "elm-test && cd examples && elm-test",
-    "lint": "elm-format src/ tests/ examples/ --validate",
+    "lint": "npm run format -- --validate",
+    "format": "elm-format src/ tests/ examples/src examples/tests --yes",
     "examples": "cd examples && elm-live src/Main.elm --start-page=index.html -- --output=built/elm.js"
   },
   "pre-commit": [

@@ -1,8 +1,6 @@
 module MathToStringSpec exposing (tests)
 
 import Expect
-import MathEvaluator
-import MathFunction
 import MathParser
 import MathToString
 import Test exposing (describe, fuzz, fuzz2, fuzz3, test)

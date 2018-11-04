@@ -2,6 +2,9 @@ port module Main exposing (main)
 
 import Browser
 import Browser.Dom as Dom
+import Complex
+import Complex.Evaluator
+import Complex.Function
 import Config
 import Dict exposing (Dict)
 import Element exposing (Element)
@@ -16,18 +19,24 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
 import Json.Decode as Decode
 import Json.Encode as Encode
-import MathEvaluator
 import MathExpression
-import MathFunction exposing (MathFunction)
 import MathParser
 import MathToString
+import Real.Evaluator
+import Real.Function
 import ScopeDialog
 import Task
+
+
+type Mode
+    = Real
+    | Complex
 
 
 type alias Model =
     { input : String
     , scope : Dict String String
+    , mode : Mode
     }
 
 
@@ -41,9 +50,27 @@ initialModel flags =
         scope =
             Decode.decodeValue (Decode.field "scope" <| Decode.dict Decode.string) flags
                 |> Result.withDefault (Dict.singleton "x" "4")
+
+        mode =
+            Decode.decodeValue (Decode.field "mode" <| Decode.string) flags
+                |> Result.toMaybe
+                |> Maybe.andThen
+                    (\modeString ->
+                        case modeString of
+                            "real" ->
+                                Just Real
+
+                            "complex" ->
+                                Just Complex
+
+                            _ ->
+                                Nothing
+                    )
+                |> Maybe.withDefault Real
     in
     ( { input = input
       , scope = scope
+      , mode = mode
       }
     , Cmd.none
     )
@@ -52,6 +79,7 @@ initialModel flags =
 type Msg
     = NewContent String
     | ScopeChanged String String
+    | ModeChanged Mode
 
 
 main : Program Decode.Value Model Msg
@@ -84,6 +112,9 @@ update msg model =
                         | scope =
                             model.scope |> Dict.insert symbol value
                     }
+
+                ModeChanged mode ->
+                    { model | mode = mode }
     in
     ( newModel
     , encodeModel newModel
@@ -96,7 +127,7 @@ update msg model =
 
 
 view : Model -> Browser.Document Msg
-view { input, scope } =
+view { input, scope, mode } =
     let
         parsed =
             MathParser.expression input
@@ -191,6 +222,7 @@ view { input, scope } =
                     ++ (case parsed of
                             Ok res ->
                                 displayParserResult
+                                    mode
                                     (\symbol ->
                                         Dict.get symbol scope
                                     )
@@ -199,49 +231,80 @@ view { input, scope } =
                             Err err ->
                                 [ ErrorDialog.view err ]
                        )
+                    ++ [ Input.radio
+                            [ Element.padding 10 ]
+                            { label =
+                                Input.labelAbove
+                                    [ Element.padding 10 ]
+                                    (Element.text "Select mode")
+                            , onChange = ModeChanged
+                            , options =
+                                [ Input.option Real <| Element.text "real"
+                                , Input.option Complex <| Element.text "complex"
+                                ]
+                            , selected = Just mode
+                            }
+                       ]
         ]
     }
 
 
 type ExpressionEvaluationError
-    = CannotConvertFloatToInt String
+    = CannoInterpretSymbolAsValue String
     | UnrecognisedFunctionName String
 
 
-displayParserResult : (String -> Maybe String) -> MathParser.ParserResult -> List (Element Msg)
-displayParserResult scope res =
+displayParserResult : Mode -> (String -> Maybe String) -> MathParser.ParserResult -> List (Element Msg)
+displayParserResult mode scope res =
     let
         input =
             MathToString.stringifyExpression res.expression
 
-        symbolToFloat s =
+        symbolToValue parser s =
             s
                 |> scope
                 |> Maybe.withDefault s
-                |> String.toFloat
-                |> Result.fromMaybe (CannotConvertFloatToInt s)
+                |> parser
+                |> Result.fromMaybe (CannoInterpretSymbolAsValue s)
 
-        createFunction name =
+        createComplexFunction name =
             name
-                |> MathFunction.fromString
-                |> Maybe.map MathFunction.toRealFunction
+                |> Complex.Function.fromString
+                |> Maybe.map Complex.Function.toFunction
+                |> Result.fromMaybe (UnrecognisedFunctionName name)
+
+        createRealFunction name =
+            name
+                |> Real.Function.fromString
+                |> Maybe.map Real.Function.toFunction
                 |> Result.fromMaybe (UnrecognisedFunctionName name)
 
         output =
-            res.expression
-                |> MathExpression.updateFunctions createFunction
-                |> Result.andThen (MathExpression.updateSymbols symbolToFloat)
-                |> Result.map MathEvaluator.evaluate
-                |> Debug.toString
+            case mode of
+                Real ->
+                    res.expression
+                        |> MathExpression.updateFunctions createRealFunction
+                        |> Result.andThen (MathExpression.updateSymbols (symbolToValue String.toFloat))
+                        |> Result.map Real.Evaluator.evaluate
+                        |> Debug.toString
+
+                Complex ->
+                    res.expression
+                        |> MathExpression.updateFunctions createComplexFunction
+                        |> Result.andThen (MathExpression.updateSymbols (symbolToValue Complex.fromString))
+                        |> Result.map Complex.Evaluator.evaluate
+                        |> Result.map Complex.toString
+                        |> Debug.toString
 
         symbols =
             res
                 |> .symbols
                 |> List.map Tuple.first
+                |> List.filter (\s -> Complex.fromString s == Nothing)
     in
     ScopeDialog.view scope symbols ScopeChanged
         ++ [ Element.paragraph
-                []
+                [ Element.padding 10 ]
                 [ Element.text "Result" ]
            , Element.el
                 [ Background.color (Element.rgba 1 1 1 1)
